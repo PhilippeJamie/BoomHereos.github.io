@@ -104,15 +104,6 @@ function drawCharacter(name, char) {
     sfx.play();
   }
 
-  function drawCharacter(name, char) {
-    ctx.fillStyle = char.color;
-    ctx.beginPath();
-    ctx.arc(char.x, char.y, 25, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = "white";
-    ctx.fillText(name, char.x - 25, char.y - 35);
-    ctx.fillText(`HP: ${char.hp}`, char.x - 25, char.y + 40);
-  }
 
   function drawEnemy(enemy) {
     ctx.fillStyle = "black";
