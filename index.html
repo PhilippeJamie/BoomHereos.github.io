@@ -9,7 +9,18 @@
     body, html { width: 100%; height: 100%; font-family: Arial, sans-serif; background: #222; overflow: hidden; }
     canvas { display: block; background: none; margin: auto; position: absolute; top: 0; bottom: 0; left: 0; right: 0; border: 5px solid #fff; }
     #ui { position: absolute; top: 10px; left: 10px; color: white; font-size: 18px; z-index: 10; }
-    #gameOver { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; font-size: 36px; background: rgba(0, 0, 0, 0.7); padding: 20px; border: 2px solid white; }
+    #gameOver {
+      display: none;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: red; /* Schriftfarbe geändert */
+      font-size: 36px;
+      background: rgba(0, 0, 0, 0.7);
+      padding: 20px;
+      border: 2px solid white;
+    }
   </style>
 </head>
 <body>
@@ -72,55 +83,34 @@
     if (e.key === "4") selected = "Boomimp";
     if (e.key === " ") activateSpecial();
   });
-const images = {
-  "Max Blaze": new Image(),
-  "Torchbot": new Image(),
-  "Volt Girl": new Image(),
-  "Boomimp": new Image(),
-  "enemy": new Image(),
-  "background": new Image() 
-};
+
+  const images = {
+    "Max Blaze": new Image(),
+    "Torchbot": new Image(),
+    "Volt Girl": new Image(),
+    "Boomimp": new Image(),
+    "enemy": new Image(),
+    "background": new Image() 
+  };
 
   images["background"].src = "IMG_4485.png";
-  if (images["background"].complete) {
-  ctx.drawImage(images["background"], 0, 0, canvas.width, canvas.height);
-} else {
-  images["background"].onload = () => {
-    ctx.drawImage(images["background"], 0, 0, canvas.width, canvas.height);
-  };
-}
-function draw() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  images["Max Blaze"].src = "Max_blaze.png";
+  images["Torchbot"].src = "Torchbot.png";
+  images["Volt Girl"].src = "Volt_girl.png";
+  images["Boomimp"].src = "Boomimp.png";
+  images["enemy"].src = "meteor_enemy.png";
 
-  if (images["background"].complete) {
-    ctx.drawImage(images["background"], 0, 0, canvas.width, canvas.height);
+  function drawCharacter(name, char) {
+    const img = images[name];
+    if (img.complete) {
+      ctx.drawImage(img, char.x - 25, char.y - 25, 50, 50);
+    } else {
+      img.onload = () => ctx.drawImage(img, char.x - 25, char.y - 25, 50, 50);
+    }
+    ctx.fillStyle = "white";
+    ctx.fillText(name, char.x - 25, char.y - 35);
+    ctx.fillText(`HP: ${char.hp}`, char.x - 25, char.y + 40);
   }
-
-  if (!isGameOver) {
-    drawCharacter(selected, characters[selected]);
-    enemies.forEach(drawEnemy);
-    powerups.forEach(drawPowerup);
-    updateEffects();
-    update();
-    requestAnimationFrame(draw);
-  }
-}  
-images["Max Blaze"].src = "Max_blaze.png";
-images["Torchbot"].src = "Torchbot.png";
-images["Volt Girl"].src = "Volt_girl.png";
-images["Boomimp"].src = "Boomimp.png";
-
-function drawCharacter(name, char) {
-  const img = images[name];
-  if (img.complete) {
-    ctx.drawImage(img, char.x - 25, char.y - 25, 50, 50); // 50x50 Größe
-  } else {
-    img.onload = () => ctx.drawImage(img, char.x - 25, char.y - 25, 50, 50);
-  }
-  ctx.fillStyle = "white";
-  ctx.fillText(name, char.x - 25, char.y - 35);
-  ctx.fillText(`HP: ${char.hp}`, char.x - 25, char.y + 40);
-}
 
   function activateSpecial() {
     const char = characters[selected];
@@ -130,19 +120,15 @@ function drawCharacter(name, char) {
     sfx.play();
   }
 
-
   function drawEnemy(enemy) {
-  const img = images["enemy"];
-  if (img.complete) {
-    ctx.drawImage(img, enemy.x - 25, enemy.y - 25, 50, 50); // Größe anpassen
-  } else {
-    img.onload = () => ctx.drawImage(img, enemy.x - 25, enemy.y - 25, 50, 50);
+    const img = images["enemy"];
+    if (img.complete) {
+      ctx.drawImage(img, enemy.x - 25, enemy.y - 25, 50, 50);
+    } else {
+      img.onload = () => ctx.drawImage(img, enemy.x - 25, enemy.y - 25, 50, 50);
+    }
   }
-}
 
-  
-  images["enemy"].src = "meteor_enemy.png";
-  
   function drawPowerup(p) {
     ctx.fillStyle = "gold";
     ctx.beginPath();
@@ -209,19 +195,4 @@ function drawCharacter(name, char) {
     }
   }
 
-  function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    if (!isGameOver) {
-      drawCharacter(selected, characters[selected]);
-      enemies.forEach(drawEnemy);
-      powerups.forEach(drawPowerup);
-      updateEffects();
-      update();
-      requestAnimationFrame(draw);
-    }
-  }
-
-  draw();
-</script>
-</body>
-</html>
+  function draw
