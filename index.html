@@ -89,7 +89,22 @@ const images = {
     ctx.drawImage(images["background"], 0, 0, canvas.width, canvas.height);
   };
 }
-  
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  if (images["background"].complete) {
+    ctx.drawImage(images["background"], 0, 0, canvas.width, canvas.height);
+  }
+
+  if (!isGameOver) {
+    drawCharacter(selected, characters[selected]);
+    enemies.forEach(drawEnemy);
+    powerups.forEach(drawPowerup);
+    updateEffects();
+    update();
+    requestAnimationFrame(draw);
+  }
+}  
 images["Max Blaze"].src = "Max_blaze.png";
 images["Torchbot"].src = "Torchbot.png";
 images["Volt Girl"].src = "Volt_girl.png";
