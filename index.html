@@ -107,11 +107,13 @@ function drawCharacter(name, char) {
 
 
   function drawEnemy(enemy) {
-    ctx.fillStyle = "black";
-    ctx.beginPath();
-    ctx.arc(enemy.x, enemy.y, enemy.radius, 0, Math.PI * 2);
-    ctx.fill();
+  const img = images["enemy"];
+  if (img.complete) {
+    ctx.drawImage(img, enemy.x - 25, enemy.y - 25, 50, 50); // Größe anpassen
+  } else {
+    img.onload = () => ctx.drawImage(img, enemy.x - 25, enemy.y - 25, 50, 50);
   }
+}
 
   
   images["enemy"].src = "meteor_enemy.png";
