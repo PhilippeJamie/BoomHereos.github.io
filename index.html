@@ -72,6 +72,29 @@
     if (e.key === "4") selected = "Boomimp";
     if (e.key === " ") activateSpecial();
   });
+const images = {
+  "Max Blaze": new Image(),
+  "Torchbot": new Image(),
+  "Volt Girl": new Image(),
+  "Boomimp": new Image()
+};
+
+images["Max Blaze"].src = "max_blaze.png";
+images["Torchbot"].src = "torchbot.png";
+images["Volt Girl"].src = "volt_girl.png";
+images["Boomimp"].src = "boomimp.png";
+
+function drawCharacter(name, char) {
+  const img = images[name];
+  if (img.complete) {
+    ctx.drawImage(img, char.x - 25, char.y - 25, 50, 50); // 50x50 Größe
+  } else {
+    img.onload = () => ctx.drawImage(img, char.x - 25, char.y - 25, 50, 50);
+  }
+  ctx.fillStyle = "white";
+  ctx.fillText(name, char.x - 25, char.y - 35);
+  ctx.fillText(`HP: ${char.hp}`, char.x - 25, char.y + 40);
+}
 
   function activateSpecial() {
     const char = characters[selected];
