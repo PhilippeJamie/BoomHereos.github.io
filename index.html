@@ -82,6 +82,13 @@ const images = {
 };
 
   images["background"].src = "IMG_4485.png";
+  if (images["background"].complete) {
+  ctx.drawImage(images["background"], 0, 0, canvas.width, canvas.height);
+} else {
+  images["background"].onload = () => {
+    ctx.drawImage(images["background"], 0, 0, canvas.width, canvas.height);
+  };
+}
   
 images["Max Blaze"].src = "Max_blaze.png";
 images["Torchbot"].src = "Torchbot.png";
