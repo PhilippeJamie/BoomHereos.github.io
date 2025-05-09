@@ -195,39 +195,22 @@
     }
   }
 
-  function draw
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(images["background"], 0, 0, canvas.width, canvas.height);
 
-    function draw() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawCharacter(selected, characters[selected]);
+    enemies.forEach(drawEnemy);
+    powerups.forEach(drawPowerup);
+    updateEffects();
 
-  // Hintergrund zeichnen
-  const bg = images["background"];
-  if (bg.complete) {
-    ctx.drawImage(bg, 0, 0, canvas.width, canvas.height);
-  }
-
-  // Restliches Zeichnen...
-  for (const name in characters) {
-    if (name === selected) drawCharacter(name, characters[name]);
-  }
-
-  enemies.forEach(drawEnemy);
-  powerups.forEach(drawPowerup);
-  updateEffects();
-
-  // Spezialeffekt-Timer runterzählen
-  if (specialActive) {
-    specialTimer--;
-    if (specialTimer <= 0) {
-      specialActive = false;
+    if (!isGameOver) {
+      update();
+      requestAnimationFrame(draw);
     }
   }
 
-  update(); // Game-Logik aktualisieren
-
-  if (!isGameOver) {
-    requestAnimationFrame(draw);
-  }
-}
-
-draw(); // Startet das Spiel
+  draw();
+</script>
+</body>
+</html>
