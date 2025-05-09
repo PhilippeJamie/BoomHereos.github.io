@@ -9,10 +9,12 @@
     body, html { width: 100%; height: 100%; font-family: Arial, sans-serif; background: #222; overflow: hidden; }
     canvas { display: block; background: #3c78d8; margin: auto; position: absolute; top: 0; bottom: 0; left: 0; right: 0; border: 5px solid #fff; }
     #ui { position: absolute; top: 10px; left: 10px; color: white; font-size: 18px; z-index: 10; }
+    #gameOver { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; font-size: 36px; background: rgba(0, 0, 0, 0.7); padding: 20px; border: 2px solid white; }
   </style>
 </head>
 <body>
 <div id="ui">Boom Heroes - 1–4 für Helden, Pfeile bewegen, Leertaste = Spezial</div>
+<div id="gameOver">GAME OVER - Seite neu laden zum Neustart</div>
 <canvas id="gameCanvas" width="800" height="600"></canvas>
 <audio id="bgMusic" loop autoplay>
   <source src="https://cdn.pixabay.com/download/audio/2022/10/19/audio_78335c9c96.mp3?filename=battle-theme-ambient-122949.mp3" type="audio/mpeg">
@@ -20,6 +22,7 @@
 <script>
   const canvas = document.getElementById("gameCanvas");
   const ctx = canvas.getContext("2d");
+  const gameOverScreen = document.getElementById("gameOver");
 
   const music = document.getElementById("bgMusic");
   music.volume = 0.3;
@@ -40,17 +43,24 @@
   const effects = [];
   const powerups = [];
 
+  let isGameOver = false;
+
   function spawnEnemy() {
-    enemies.push({ x: 800, y: Math.random() * 550 + 25, radius: 20, speed: 1.5 });
+    if (!isGameOver) {
+      enemies.push({ x: 800, y: Math.random() * 550 + 25, radius: 20, speed: 1.5 });
+    }
   }
   function spawnPowerup() {
-    powerups.push({ x: Math.random() * 700 + 50, y: Math.random() * 500 + 50, radius: 10 });
+    if (!isGameOver) {
+      powerups.push({ x: Math.random() * 700 + 50, y: Math.random() * 500 + 50, radius: 10 });
+    }
   }
 
   setInterval(spawnEnemy, 2500);
   setInterval(spawnPowerup, 8000);
 
   document.addEventListener("keydown", e => {
+    if (isGameOver) return;
     const char = characters[selected];
     if (e.key === "ArrowRight") char.x += 10;
     if (e.key === "ArrowLeft") char.x -= 10;
@@ -116,6 +126,12 @@
 
   function update() {
     const char = characters[selected];
+    if (char.hp <= 0) {
+      isGameOver = true;
+      gameOverScreen.style.display = "block";
+      return;
+    }
+
     for (let i = enemies.length - 1; i >= 0; i--) {
       const enemy = enemies[i];
       enemy.x -= enemy.speed;
@@ -150,12 +166,14 @@
 
   function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    drawCharacter(selected, characters[selected]);
-    enemies.forEach(drawEnemy);
-    powerups.forEach(drawPowerup);
-    updateEffects();
-    update();
-    requestAnimationFrame(draw);
+    if (!isGameOver) {
+      drawCharacter(selected, characters[selected]);
+      enemies.forEach(drawEnemy);
+      powerups.forEach(drawPowerup);
+      updateEffects();
+      update();
+      requestAnimationFrame(draw);
+    }
   }
 
   draw();
