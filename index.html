@@ -196,3 +196,38 @@
   }
 
   function draw
+
+    function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Hintergrund zeichnen
+  const bg = images["background"];
+  if (bg.complete) {
+    ctx.drawImage(bg, 0, 0, canvas.width, canvas.height);
+  }
+
+  // Restliches Zeichnen...
+  for (const name in characters) {
+    if (name === selected) drawCharacter(name, characters[name]);
+  }
+
+  enemies.forEach(drawEnemy);
+  powerups.forEach(drawPowerup);
+  updateEffects();
+
+  // Spezialeffekt-Timer runterzählen
+  if (specialActive) {
+    specialTimer--;
+    if (specialTimer <= 0) {
+      specialActive = false;
+    }
+  }
+
+  update(); // Game-Logik aktualisieren
+
+  if (!isGameOver) {
+    requestAnimationFrame(draw);
+  }
+}
+
+draw(); // Startet das Spiel
