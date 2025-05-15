@@ -1,217 +1,278 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="de">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>HTML5 Game</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Boom Heroes</title>
   <style>
-    body {
-      margin: 0;
-      overflow: hidden;
-      background-color: #111;
-    }
-    canvas {
-      display: block;
-      margin: auto;
-      background: #222;
-      border: 2px solid #555;
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body, html { width: 100%; height: 100%; font-family: Arial, sans-serif; background: #222; overflow: hidden; }
+    canvas { display: block; background: none; margin: auto; position: absolute; top: 0; bottom: 0; left: 0; right: 0; border: 5px solid #fff; }
+    #ui { position: absolute; top: 10px; left: 10px; color: white; font-size: 18px; z-index: 10; }
+    #gameOver {
+      display: none;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: red;
+      font-size: 36px;
+      background: rgba(0, 0, 0, 0.7);
+      padding: 20px;
+      border: 2px solid white;
     }
   </style>
 </head>
 <body>
-  <canvas id="gameCanvas" width="900" height="600"></canvas>
-  <script>
-    const canvas = document.getElementById("gameCanvas");
-    const ctx = canvas.getContext("2d");
+<div id="ui">Boom Heroes - 1–4 für Helden, Pfeile bewegen, Z = Schuss, Leertaste = Spezial</div>
+<div id="gameOver">GAME OVER - Seite neu laden zum Neustart</div>
+<canvas id="gameCanvas" width="800" height="600"></canvas>
+<audio id="bgMusic" loop autoplay>
+  <source src="https://cdn.pixabay.com/download/audio/2022/10/19/audio_78335c9c96.mp3?filename=battle-theme-ambient-122949.mp3" type="audio/mpeg">
+</audio>
+<script>
+  const canvas = document.getElementById("gameCanvas");
+  const ctx = canvas.getContext("2d");
+  const gameOverScreen = document.getElementById("gameOver");
 
-    const sfxShoot = new Audio("shoot.mp3");
-    const sfxHit = new Audio("hit.mp3");
+  const music = document.getElementById("bgMusic");
+  music.volume = 0.3;
 
-    const characters = {
-      "Max Blaze": { x: 200, y: 300, color: "red", alive: true },
-      "Torchbot": { x: 200, y: 350, color: "orange", alive: true },
-      "Volt Girl": { x: 200, y: 400, color: "yellow", alive: true },
-      "Boomimp": { x: 200, y: 450, color: "purple", alive: true }
-    };
+  const sfx = new Audio("https://cdn.pixabay.com/download/audio/2022/03/22/audio_d98f38fd7a.mp3?filename=retro-game-powerup-21369.mp3");
 
-    let selected = "Max Blaze";
-    let bullets = [];
-    let enemies = [];
-    let isGameOver = false;
+  const characters = {
+    "Max Blaze": { x: 150, y: 300, color: "red", ability: "Punch", hp: 100 },
+    "Torchbot": { x: 150, y: 300, color: "orange", ability: "Flame", hp: 100 },
+    "Volt Girl": { x: 150, y: 300, color: "purple", ability: "Dash", hp: 100 },
+    "Boomimp": { x: 150, y: 300, color: "green", ability: "Boom", hp: 100 }
+  };
 
-    let shootDirection = { x: 1, y: 0 }; // Standardrichtung
-    const keysPressed = {};
+  let selected = "Max Blaze";
+  let specialActive = false;
+  let specialTimer = 0;
+  const enemies = [];
+  const effects = [];
+  const powerups = [];
+  const projectiles = [];
+  const explosions = [];
 
-    document.addEventListener("keydown", e => {
-      keysPressed[e.key] = true;
-      if (isGameOver) return;
-      const char = characters[selected];
-      if (!char.alive) return;
+  let isGameOver = false;
 
-      if (e.key === "ArrowRight") {
-        if (char.x + 10 < 700) char.x += 10;
-      }
-      if (e.key === "ArrowLeft") {
-        if (char.x - 10 > 150) char.x -= 10;
-      }
-      if (e.key === "ArrowUp") {
-        if (char.y - 10 > 50) char.y -= 10;
-      }
-      if (e.key === "ArrowDown") {
-        if (char.y + 10 < 550) char.y += 10;
-      }
-
-      if (e.key === "1") selected = "Max Blaze";
-      if (e.key === "2") selected = "Torchbot";
-      if (e.key === "3") selected = "Volt Girl";
-      if (e.key === "4") selected = "Boomimp";
-
-      if (e.key === " ") activateSpecial();
-      if (e.key.toLowerCase() === "f") shootBullet();
-
-      updateShootDirection();
-    });
-
-    document.addEventListener("keyup", e => {
-      keysPressed[e.key] = false;
-      updateShootDirection();
-    });
-
-    function updateShootDirection() {
-      let dx = 0;
-      let dy = 0;
-      if (keysPressed["ArrowRight"]) dx += 1;
-      if (keysPressed["ArrowLeft"]) dx -= 1;
-      if (keysPressed["ArrowUp"]) dy -= 1;
-      if (keysPressed["ArrowDown"]) dy += 1;
-
-      if (dx === 0 && dy === 0) {
-        shootDirection = { x: 1, y: 0 };
-      } else {
-        const length = Math.sqrt(dx * dx + dy * dy);
-        shootDirection = { x: dx / length, y: dy / length };
-      }
-    }
-
-    function shootBullet() {
-      const char = characters[selected];
-      if (!char.alive) return;
-
-      bullets.push({
-        x: char.x + shootDirection.x * 20,
-        y: char.y + shootDirection.y * 20,
-        radius: 5,
-        speedX: shootDirection.x * 7,
-        speedY: shootDirection.y * 7
-      });
-      sfxShoot.play();
-    }
-
-    function activateSpecial() {
-      // Spezialfähigkeit: noch nicht definiert
-    }
-
-    function spawnEnemy() {
+  function spawnEnemy() {
+    if (!isGameOver) {
       enemies.push({
-        x: 900,
+        x: 800,
         y: Math.random() * 550 + 25,
         radius: 20,
-        speed: 2,
-        hp: 3,
-        dying: false
+        speed: 1.5,
+        hp: Math.floor(Math.random() * 3) + 2
       });
     }
+  }
 
-    setInterval(spawnEnemy, 2000);
+  function spawnPowerup() {
+    if (!isGameOver) {
+      powerups.push({ x: Math.random() * 700 + 50, y: Math.random() * 500 + 50, radius: 10 });
+    }
+  }
 
-    function gameLoop() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+  setInterval(spawnEnemy, 2500);
+  setInterval(spawnPowerup, 8000);
 
-      // Zeichne Charaktere
-      for (let key in characters) {
-        const char = characters[key];
-        if (char.alive) {
-          ctx.fillStyle = char.color;
-          ctx.beginPath();
-          ctx.arc(char.x, char.y, 15, 0, Math.PI * 2);
-          ctx.fill();
+  document.addEventListener("keydown", e => {
+    if (isGameOver) return;
+    const char = characters[selected];
+    if (e.key === "ArrowRight") char.x += 10;
+    if (e.key === "ArrowLeft") char.x -= 10;
+    if (e.key === "ArrowUp") char.y -= 10;
+    if (e.key === "ArrowDown") char.y += 10;
+    if (e.key === "1") selected = "Max Blaze";
+    if (e.key === "2") selected = "Torchbot";
+    if (e.key === "3") selected = "Volt Girl";
+    if (e.key === "4") selected = "Boomimp";
+    if (e.key === " ") activateSpecial();
+    if (e.key.toLowerCase() === "z") shoot();
+  });
+
+  const images = {
+    "Max Blaze": new Image(),
+    "Torchbot": new Image(),
+    "Volt Girl": new Image(),
+    "Boomimp": new Image(),
+    "enemy": new Image(),
+    "background": new Image()
+  };
+
+  images["background"].src = "IMG_4485.png";
+  images["Max Blaze"].src = "Max_blaze.png";
+  images["Torchbot"].src = "Torchbot.png";
+  images["Volt Girl"].src = "Volt_girl.png";
+  images["Boomimp"].src = "Boomimp.png";
+  images["enemy"].src = "meteor_enemy.png";
+
+  let imagesLoaded = 0;
+  const totalImages = Object.keys(images).length;
+  for (const key in images) {
+    images[key].onload = () => {
+      imagesLoaded++;
+      if (imagesLoaded === totalImages) {
+        draw();
+      }
+    };
+  }
+
+  function drawCharacter(name, char) {
+    const img = images[name];
+    ctx.drawImage(img, char.x - 25, char.y - 25, 50, 50);
+    ctx.fillStyle = "white";
+    ctx.fillText(name, char.x - 25, char.y - 35);
+    ctx.fillText(`HP: ${char.hp}`, char.x - 25, char.y + 40);
+  }
+
+  function activateSpecial() {
+    const char = characters[selected];
+    specialActive = true;
+    specialTimer = 20;
+    effects.push({ x: char.x, y: char.y, type: char.ability, time: 20 });
+    sfx.play();
+  }
+
+  function shoot() {
+    const char = characters[selected];
+    projectiles.push({ x: char.x + 25, y: char.y, speed: 5, damage: 1 });
+  }
+
+  function updateProjectiles() {
+    for (let i = projectiles.length - 1; i >= 0; i--) {
+      const p = projectiles[i];
+      p.x += p.speed;
+
+      for (let j = enemies.length - 1; j >= 0; j--) {
+        const e = enemies[j];
+        if (Math.abs(p.x - e.x) < 20 && Math.abs(p.y - e.y) < 20) {
+          e.hp -= p.damage;
+          projectiles.splice(i, 1);
+          if (e.hp <= 0) {
+            explosions.push({ x: e.x, y: e.y, time: 20 });
+            enemies.splice(j, 1);
+          }
+          break;
         }
       }
 
-      // Zeichne Bullets
-      bullets.forEach((bullet, bIndex) => {
-        bullet.x += bullet.speedX;
-        bullet.y += bullet.speedY;
+      if (p.x > canvas.width) projectiles.splice(i, 1);
+    }
+  }
 
-        ctx.fillStyle = "white";
-        ctx.beginPath();
-        ctx.arc(bullet.x, bullet.y, bullet.radius, 0, Math.PI * 2);
-        ctx.fill();
+  function drawProjectiles() {
+    ctx.fillStyle = "cyan";
+    projectiles.forEach(p => {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 5, 0, Math.PI * 2);
+      ctx.fill();
+    });
+  }
 
-        if (
-          bullet.x < 0 ||
-          bullet.x > canvas.width ||
-          bullet.y < 0 ||
-          bullet.y > canvas.height
-        ) {
-          bullets.splice(bIndex, 1);
-          return;
-        }
+  function drawExplosions() {
+    for (let i = explosions.length - 1; i >= 0; i--) {
+      const e = explosions[i];
+      ctx.fillStyle = `rgba(255,165,0,${e.time / 20})`;
+      ctx.beginPath();
+      ctx.arc(e.x, e.y, 30 - e.time, 0, Math.PI * 2);
+      ctx.fill();
+      e.time--;
+      if (e.time <= 0) explosions.splice(i, 1);
+    }
+  }
 
-        enemies.forEach(enemy => {
-          if (!enemy.dying) {
-            const dx = bullet.x - enemy.x;
-            const dy = bullet.y - enemy.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist < bullet.radius + enemy.radius) {
-              enemy.hp--;
-              bullets.splice(bIndex, 1);
-              if (enemy.hp <= 0) {
-                enemy.dying = true;
-                sfxHit.play();
-              }
-            }
-          }
-        });
-      });
+  function drawEnemy(enemy) {
+    const img = images["enemy"];
+    ctx.drawImage(img, enemy.x - 25, enemy.y - 25, 50, 50);
+  }
 
-      // Zeichne Gegner
-      enemies.forEach((enemy, eIndex) => {
-        if (enemy.dying) {
-          enemies.splice(eIndex, 1);
-          return;
-        }
-        enemy.x -= enemy.speed;
-        ctx.fillStyle = "green";
-        ctx.beginPath();
-        ctx.arc(enemy.x, enemy.y, enemy.radius, 0, Math.PI * 2);
-        ctx.fill();
+  function drawPowerup(p) {
+    ctx.fillStyle = "gold";
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+    ctx.fill();
+  }
 
-        for (let key in characters) {
-          const char = characters[key];
-          if (char.alive) {
-            const dx = enemy.x - char.x;
-            const dy = enemy.y - char.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist < enemy.radius + 15) {
-              char.alive = false;
-            }
-          }
-        }
-      });
+  function updateEffects() {
+    effects.forEach((eff, i) => {
+      eff.time--;
+      ctx.strokeStyle = "white";
+      ctx.beginPath();
+      if (eff.type === "Punch") ctx.arc(eff.x, eff.y, 50, 0, Math.PI * 2);
+      else if (eff.type === "Flame") ctx.rect(eff.x, eff.y - 10, 100, 20);
+      else if (eff.type === "Dash") ctx.rect(eff.x - 20, eff.y - 40, 40, 80);
+      else if (eff.type === "Boom") ctx.arc(eff.x, eff.y, 80, 0, Math.PI * 2);
+      ctx.stroke();
+      if (eff.time <= 0) effects.splice(i, 1);
+    });
+  }
 
-      // Game Over prüfen
-      if (!Object.values(characters).some(c => c.alive)) {
-        isGameOver = true;
-        ctx.fillStyle = "white";
-        ctx.font = "48px Arial";
-        ctx.fillText("GAME OVER", 320, 300);
-      } else {
-        requestAnimationFrame(gameLoop);
-      }
+  function update() {
+    const char = characters[selected];
+    if (char.hp <= 0) {
+      isGameOver = true;
+      gameOverScreen.style.display = "block";
+      return;
     }
 
-    requestAnimationFrame(gameLoop);
-  </script>
+    updateProjectiles();
+
+    for (let i = enemies.length - 1; i >= 0; i--) {
+      const enemy = enemies[i];
+      enemy.x -= enemy.speed;
+
+      const dx = enemy.x - char.x;
+      const dy = enemy.y - char.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < 25 + enemy.radius) char.hp -= 1;
+
+      effects.forEach(eff => {
+        let hit = false;
+        if (eff.type === "Punch" && Math.hypot(eff.x - enemy.x, eff.y - enemy.y) < 50) hit = true;
+        if (eff.type === "Flame" && enemy.x > eff.x && enemy.x < eff.x + 100 && Math.abs(enemy.y - eff.y) < 20) hit = true;
+        if (eff.type === "Dash" && Math.abs(enemy.x - eff.x) < 20 && Math.abs(enemy.y - eff.y) < 40) hit = true;
+        if (eff.type === "Boom" && Math.hypot(eff.x - enemy.x, eff.y - enemy.y) < 80) hit = true;
+        if (hit) {
+          enemy.hp = 0;
+          explosions.push({ x: enemy.x, y: enemy.y, time: 20 });
+          enemies.splice(i, 1);
+        }
+      });
+
+      if (enemy.x < -20) enemies.splice(i, 1);
+    }
+
+    for (let i = powerups.length - 1; i >= 0; i--) {
+      const p = powerups[i];
+      if (Math.hypot(p.x - char.x, p.y - char.y) < 25 + p.radius) {
+        char.hp += 10;
+        if (char.hp > 100) char.hp = 100;
+        powerups.splice(i, 1);
+        sfx.play();
+      }
+    }
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(images["background"], 0, 0, canvas.width, canvas.height);
+
+    drawCharacter(selected, characters[selected]);
+    enemies.forEach(drawEnemy);
+    powerups.forEach(drawPowerup);
+    updateEffects();
+    drawProjectiles();
+    drawExplosions();
+
+    if (!isGameOver) {
+      update();
+      requestAnimationFrame(draw);
+    }
+  }
+</script>
 </body>
 </html>
