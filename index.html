@@ -23,6 +23,7 @@
       text-align: center;
       width: 400px;
       font-family: 'Arial Black', sans-serif;
+      z-index: 20;
     }
   </style>
 </head>
@@ -137,20 +138,7 @@
   images["Volt Girl"].src = "Volt_girl.png";
   images["Boomimp"].src = "Boomimp.png";
   images["enemy"].src = "meteor_enemy.png";
-  images["spaceship"].src = "spaceship.png"; // Du kannst hier dein Raumschiff-Bild anpassen
-
-  // Sicherstellen, dass alle Bilder geladen sind
-  let imagesLoaded = 0;
-  const totalImages = Object.keys(images).length;
-
-  for (const key in images) {
-    images[key].onload = () => {
-      imagesLoaded++;
-      if (imagesLoaded === totalImages) {
-        draw();
-      }
-    };
-  }
+  images["spaceship"].src = "spaceship.png";
 
   function drawCharacter(name, char) {
     if (!char.alive) return;
@@ -163,6 +151,7 @@
   }
 
   function drawSpaceship(ship) {
+    if (ship.hp <= 0) return;
     ctx.drawImage(images["spaceship"], ship.x - ship.width/2, ship.y - ship.height/2, ship.width, ship.height);
     ctx.fillStyle = "white";
     ctx.font = "14px Arial";
@@ -178,193 +167,48 @@
     sfxShoot.play();
   }
 
-  // Bullets werden in Richtung rechts geschossen, auch oben und unten schießen
   function shootBullet() {
     const char = characters[selected];
     if (!char.alive) return;
-
-    // Bullet Richtung: 0 = gerade rechts, 1 = oben-rechts, 2 = unten-rechts
-    // Steuerung mit Pfeiltasten: wenn Up oder Down gedrückt, passt Richtung
-    // Einfachheitshalber: Wenn Up & Down gedrückt nicht gleichzeitig (Keydown Event), hier nur gerade rechts
     bullets.push({
       x: char.x + 20,
       y: char.y,
-}
-
-function drawEnemy(enemy) {
-if (enemy.dying) {
-// Explosion Animation
-ctx.fillStyle = rgba(255, ${Math.floor(255 - enemy.dyingFrame * 10)}, 0, 0.7);
-ctx.beginPath();
-ctx.arc(enemy.x, enemy.y, 20 + enemy.dyingFrame*3, 0, Math.PI * 2);
-ctx.fill();  enemy.dyingFrame++;
-  if (enemy.dyingFrame > 10) {
-    const index = enemies.indexOf(enemy);
-    if (index > -1) enemies.splice(index, 1);
+      radius: 5,
+      speed: 7
+    });
+    sfxShoot.play();
   }
-  return;
-}
-ctx.drawImage(images["enemy"], enemy.x - 25, enemy.y - 25, 50, 50);
-}
 
-function drawPowerup(p) {
-ctx.fillStyle = "gold";
-ctx.beginPath();
-ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-ctx.fill();
-}
-
-function updateEffects() {
-effects.forEach((eff, i) => {
-eff.time--;
-ctx.strokeStyle = "white";
-ctx.beginPath();
-if (eff.type === "Punch") {
-ctx.arc(eff.x, eff.y, 50, 0, Math.PI * 2);
-} else if (eff.type === "Flame") {
-ctx.rect(eff.x, eff.y - 10, 100, 20);
-} else if (eff.type === "Dash") {
-ctx.rect(eff.x - 20, eff.y - 40, 40, 80);
-} else if (eff.type === "Boom") {
-ctx.arc(eff.x, eff.y, 80, 0, Math.PI * 2);
-}
-ctx.stroke();
-if (eff.time <= 0) effects.splice(i, 1);
-});
-}
-
-function updateBullets() {
-bullets.forEach((b, i) => {
-b.x += b.speed;
-// Einfach nur gerade rechts schießen
-for (let j = enemies.length - 1; j >= 0; j--) {
-const enemy = enemies[j];
-if (!enemy.dying && Math.hypot(b.x - enemy.x, b.y - enemy.y) < b.radius + enemy.radius) {
-enemy.hp--;
-bullets.splice(i, 1);
-if (enemy.hp <= 0) {
-enemy.dying = true;
-enemy.dyingFrame = 0;
-sfxHit.play();
-}
-break;
-}
-}
-if (b.x > canvas.width + 10) bullets.splice(i, 1);
-});
-}
-
-function update() {
-// Prüfe ob Spiel vorbei ist: Alle Charaktere tot oder alle Raumschiffe zerstört
-const allCharsDead = Object.values(characters).every(c => !c.alive || c.hp <= 0);
-const allShipsDead = spaceships.every(s => s.hp <= 0);
-if (allCharsDead || allShipsDead) {
-isGameOver = true;
-gameOverScreen.style.display = "block";
-gameOverScreen.innerHTML = allCharsDead
-? "GAME OVER - Alle Helden sind gefallen.<br>Seite neu laden zum Neustart."
-: "GAME OVER - Alle Raumschiffe wurden zerstört.<br>Seite neu laden zum Neustart.";
-return;
-}// Update Charaktere
-for (const name in characters) {
-  const c = characters[name];
-  if (c.hp <= 0 && c.alive) {
-    c.alive = false;
-  }
-}
-
-// Gegner bewegen & Kollision mit Charakteren oder Raumschiffen
-for (let i = enemies.length - 1; i >= 0; i--) {
-  const enemy = enemies[i];
-  if (enemy.dying) {
-    // Animation handled in draw
-    continue;
-  }
-  enemy.x -= enemy.speed;
-
-  // Kollisionsabfrage mit Charakteren
-  for (const name in characters) {
-    const c = characters[name];
-    if (!c.alive) continue;
-    const dx = enemy.x - c.x;
-    const dy = enemy.y - c.y;
-    const dist = Math.sqrt(dx * dx + dy * dy);
-    if (dist < 25 + enemy.radius) {
-      c.hp -= 1;
-      if (c.hp <= 0) c.alive = false;
-      enemies.splice(i, 1);
-      break;
+  function drawEnemy(enemy) {
+    if (enemy.dying) {
+      ctx.fillStyle = `rgba(255, ${Math.floor(255 - enemy.dyingFrame * 25)}, 0, 0.7)`;
+      ctx.beginPath();
+      ctx.arc(enemy.x, enemy.y, 20 + enemy.dyingFrame * 3, 0, Math.PI * 2);
+      ctx.fill();
+      enemy.dyingFrame++;
+      if (enemy.dyingFrame > 10) {
+        const index = enemies.indexOf(enemy);
+        if (index > -1) enemies.splice(index, 1);
+      }
+      return;
     }
+    ctx.drawImage(images["enemy"], enemy.x - 25, enemy.y - 25, 50, 50);
   }
 
-  // Kollisionsabfrage mit Raumschiffen
-  for (let s of spaceships) {
-    if (s.hp <= 0) continue;
-    const dx = enemy.x - s.x;
-    const dy = enemy.y - s.y;
-    const dist = Math.sqrt(dx * dx + dy * dy);
-    if (dist < 35 + enemy.radius) {
-      s.hp -= 10;
-      enemies.splice(i, 1);
-      break;
-    }
+  function drawPowerup(p) {
+    ctx.fillStyle = "gold";
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+    ctx.fill();
   }
 
-  if (enemy.x < -20) enemies.splice(i, 1);
-}
-
-// Powerups einsammeln
-for (let i = powerups.length - 1; i >= 0; i--) {
-  const p = powerups[i];
-  for (const name in characters) {
-    const c = characters[name];
-    if (!c.alive) continue;
-    if (Math.hypot(p.x - c.x, p.y - c.y) < 25 + p.radius) {
-      c.hp += 10;
-      if (c.hp > 100) c.hp = 100;
-      powerups.splice(i, 1);
-      sfxShoot.play();
-      break;
-    }
-  }
-}
-
-updateEffects();
-updateBullets();
-}
-
-function draw() {
-ctx.clearRect(0, 0, canvas.width, canvas.height);
-ctx.drawImage(images["background"], 0, 0, canvas.width, canvas.height);// Raumschiffe zeichnen
-for (const ship of spaceships) {
-  if (ship.hp > 0) drawSpaceship(ship);
-}
-
-// Charaktere zeichnen
-for (const name in characters) {
-  drawCharacter(name, characters[name]);
-}
-
-// Gegner, Powerups, Effekte, Bullets zeichnen
-enemies.forEach(drawEnemy);
-powerups.forEach(drawPowerup);
-
-// Spezial Effekte
-updateEffects();
-
-// Bullets zeichnen
-bullets.forEach(b => {
-  ctx.fillStyle = "yellow";
-  ctx.beginPath();
-  ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
-  ctx.fill();
-});
-
-if (!isGameOver) {
-  update();
-  requestAnimationFrame(draw);
-}
-}
-</script>
-
-</body> </html> ```
+  function updateEffects() {
+    for (let i = effects.length - 1; i >= 0; i--) {
+      const eff = effects[i];
+      eff.time--;
+      ctx.strokeStyle = "white";
+      ctx.beginPath();
+      if (eff.type === "Punch") {
+        ctx.arc(eff.x, eff.y, 50, 0, Math.PI * 2);
+      } else if (eff.type === "Flame") {
+        ctx.rect(eff.x, eff.y - 10,
