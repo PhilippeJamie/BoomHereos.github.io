@@ -1,14 +1,27 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Boom Heroes</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body, html { width: 100%; height: 100%; font-family: Arial, sans-serif; background: #222; overflow: hidden; }
-    canvas { display: block; background: none; margin: auto; position: absolute; top: 0; bottom: 0; left: 0; right: 0; border: 5px solid #fff; }
-    #ui { position: absolute; top: 10px; left: 10px; color: white; font-size: 18px; z-index: 10; }
+    canvas {
+      display: block;
+      background: none;
+      margin: auto;
+      position: absolute;
+      top: 0; bottom: 0; left: 0; right: 0;
+      border: 5px solid #fff;
+    }
+    #ui {
+      position: absolute;
+      top: 10px; left: 10px;
+      color: white;
+      font-size: 18px;
+      z-index: 10;
+    }
     #gameOver {
       display: none;
       position: absolute;
@@ -17,219 +30,374 @@
       transform: translate(-50%, -50%);
       color: red;
       font-size: 36px;
-      background: rgba(0, 0, 0, 0.7);
-      padding: 20px;
-      border: 2px solid white;
+      background: rgba(0, 0, 0, 0.85);
+      padding: 30px 40px;
+      border: 3px solid white;
+      text-align: center;
+      font-weight: bold;
       z-index: 20;
     }
   </style>
 </head>
 <body>
-<div id="ui">Boom Heroes - 1–4 für Helden, Pfeile bewegen, Leertaste = Spezial, WASD = Schießen</div>
-<div id="gameOver">GAME OVER - Seite neu laden zum Neustart</div>
-<canvas id="gameCanvas" width="800" height="600"></canvas>
-<audio id="bgMusic" loop autoplay>
-  <source src="https://cdn.pixabay.com/download/audio/2022/10/19/audio_78335c9c96.mp3?filename=battle-theme-ambient-122949.mp3" type="audio/mpeg">
-</audio>
-<script>
-const canvas = document.getElementById("gameCanvas");
-const ctx = canvas.getContext("2d");
-const gameOverScreen = document.getElementById("gameOver");
+  <div id="ui">Boom Heroes - 1–4 für Helden, Pfeile bewegen, Leertaste = Spezial, WASD = Schießen</div>
+  <div id="gameOver">GAME OVER - Seite neu laden zum Neustart</div>
+  <canvas id="gameCanvas" width="800" height="600"></canvas>
+  <audio id="bgMusic" loop autoplay>
+    <source src="https://cdn.pixabay.com/download/audio/2022/10/19/audio_78335c9c96.mp3?filename=battle-theme-ambient-122949.mp3" type="audio/mpeg" />
+  </audio>
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+    const gameOverScreen = document.getElementById("gameOver");
 
-const music = document.getElementById("bgMusic");
-music.volume = 0.3;
+    const music = document.getElementById("bgMusic");
+    music.volume = 0.3;
 
-const sfx = new Audio("https://cdn.pixabay.com/download/audio/2022/03/22/audio_d98f38fd7a.mp3?filename=retro-game-powerup-21369.mp3");
+    const sfx = new Audio("https://cdn.pixabay.com/download/audio/2022/03/22/audio_d98f38fd7a.mp3?filename=retro-game-powerup-21369.mp3");
 
-const characters = {
-  "Max Blaze": { x: 150, y: 100, color: "red", ability: "Punch", hp: 100 },
-  "Torchbot": { x: 150, y: 200, color: "orange", ability: "Flame", hp: 100 },
-  "Volt Girl": { x: 150, y: 300, color: "purple", ability: "Dash", hp: 100 },
-  "Boomimp": { x: 150, y: 400, color: "green", ability: "Boom", hp: 100 }
-};
+    const characters = {
+      "Max Blaze": { x: 150, y: 300, color: "red", ability: "Punch", hp: 100, alive: true },
+      "Torchbot": { x: 150, y: 360, color: "orange", ability: "Flame", hp: 100, alive: true },
+      "Volt Girl": { x: 150, y: 420, color: "purple", ability: "Dash", hp: 100, alive: true },
+      "Boomimp": { x: 150, y: 480, color: "green", ability: "Boom", hp: 100, alive: true }
+    };
 
-const baseStructures = [
-  { x: 40, y: 100, hp: 1000 },
-  { x: 40, y: 200, hp: 1000 },
-  { x: 40, y: 300, hp: 1000 },
-  { x: 40, y: 400, hp: 1000 }
-];
+    let selected = "Max Blaze";
+    let specialActive = false;
+    let specialTimer = 0;
+    const enemies = [];
+    const effects = [];
+    const powerups = [];
+    const bullets = [];
 
-let selected = "Max Blaze";
-let specialActive = false;
-let specialTimer = 0;
-const enemies = [];
-const effects = [];
-const powerups = [];
-const bullets = [];
-let isGameOver = false;
+    // Vier Basen (Raumschiffe) links
+    const bases = [
+      { x: 60, y: 300, hp: 1000, width: 50, height: 80 },
+      { x: 60, y: 360, hp: 1000, width: 50, height: 80 },
+      { x: 60, y: 420, hp: 1000, width: 50, height: 80 },
+      { x: 60, y: 480, hp: 1000, width: 50, height: 80 }
+    ];
 
-function spawnEnemy() {
-  if (!isGameOver) {
-    enemies.push({ x: 800, y: Math.random() * 550 + 25, radius: 20, speed: 1.5, hp: 3 });
-  }
-}
-function spawnPowerup() {
-  if (!isGameOver) {
-    powerups.push({ x: Math.random() * 700 + 50, y: Math.random() * 500 + 50, radius: 10 });
-  }
-}
+    let isGameOver = false;
 
-setInterval(spawnEnemy, 2500);
-setInterval(spawnPowerup, 8000);
+    function spawnEnemy() {
+      if (!isGameOver) {
+        enemies.push({
+          x: 800,
+          y: Math.random() * 550 + 25,
+          radius: 20,
+          speed: 1.5 + Math.random(),
+          hp: 1 + Math.floor(Math.random() * 3), // 1-3 Schüsse zum Zerstören
+          hitTimer: 0 // Für Animation
+        });
+      }
+    }
+    function spawnPowerup() {
+      if (!isGameOver) {
+        powerups.push({
+          x: Math.random() * 700 + 100,
+          y: Math.random() * 500 + 50,
+          radius: 10
+        });
+      }
+    }
 
-document.addEventListener("keydown", e => {
-  if (isGameOver) return;
-  const char = characters[selected];
-  if (e.key === "ArrowRight" && char.x < 790) char.x += 10;
-  if (e.key === "ArrowLeft" && char.x > 100) char.x -= 10;
-  if (e.key === "ArrowUp" && char.y > 10) char.y -= 10;
-  if (e.key === "ArrowDown" && char.y < 590) char.y += 10;
-  if (e.key === "1") selected = "Max Blaze";
-  if (e.key === "2") selected = "Torchbot";
-  if (e.key === "3") selected = "Volt Girl";
-  if (e.key === "4") selected = "Boomimp";
-  if (e.key === " ") activateSpecial();
-  if (["w", "a", "s", "d"].includes(e.key.toLowerCase())) shootBullet(e.key.toLowerCase());
-});
+    setInterval(spawnEnemy, 2500);
+    setInterval(spawnPowerup, 8000);
 
-function shootBullet(dir) {
-  const char = characters[selected];
-  let dx = 0, dy = 0;
-  if (dir === "w") dy = -5;
-  if (dir === "s") dy = 5;
-  if (dir === "a") dx = -5;
-  if (dir === "d") dx = 5;
-  bullets.push({ x: char.x, y: char.y, dx, dy });
-}
+    // Bewegung & Schießen
+    const keys = {};
+    document.addEventListener("keydown", e => {
+      keys[e.key.toLowerCase()] = true;
+      if (isGameOver) return;
 
-function drawCharacter(name, char) {
-  ctx.fillStyle = char.color;
-  ctx.beginPath();
-  ctx.arc(char.x, char.y, 20, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = "white";
-  ctx.fillText(name, char.x - 25, char.y - 35);
-  ctx.fillText(`HP: ${char.hp}`, char.x - 25, char.y + 40);
-}
+      if (e.key === "1") selected = "Max Blaze";
+      if (e.key === "2") selected = "Torchbot";
+      if (e.key === "3") selected = "Volt Girl";
+      if (e.key === "4") selected = "Boomimp";
 
-function drawBase(base) {
-  ctx.fillStyle = "gray";
-  ctx.fillRect(base.x - 20, base.y - 20, 40, 40);
-  ctx.fillStyle = "white";
-  ctx.fillText(`HP: ${base.hp}`, base.x - 25, base.y + 35);
-}
+      if (e.key === " ") activateSpecial();
+    });
+    document.addEventListener("keyup", e => {
+      keys[e.key.toLowerCase()] = false;
+    });
 
-function activateSpecial() {
-  const char = characters[selected];
-  specialActive = true;
-  specialTimer = 20;
-  effects.push({ x: char.x, y: char.y, type: char.ability, time: 20 });
-  sfx.play();
-}
+    const images = {
+      "Max Blaze": new Image(),
+      "Torchbot": new Image(),
+      "Volt Girl": new Image(),
+      "Boomimp": new Image(),
+      "enemy": new Image(),
+      "background": new Image(),
+      "base": new Image()
+    };
 
-function updateEffects() {
-  for (let i = effects.length - 1; i >= 0; i--) {
-    const eff = effects[i];
-    eff.time--;
-    ctx.strokeStyle = "white";
-    ctx.beginPath();
-    ctx.arc(eff.x, eff.y, 50, 0, Math.PI * 2);
-    ctx.stroke();
-    if (eff.time <= 0) effects.splice(i, 1);
-  }
-}
+    images["background"].src = "IMG_4485.png";
+    images["Max Blaze"].src = "Max_blaze.png";
+    images["Torchbot"].src = "Torchbot.png";
+    images["Volt Girl"].src = "Volt_girl.png";
+    images["Boomimp"].src = "Boomimp.png";
+    images["enemy"].src = "meteor_enemy.png";
+    images["base"].src = "spaceship_base.png"; // Bild für Raumschiffe
 
-function update() {
-  for (const name in characters) {
-    const char = characters[name];
-    if (char.hp > 0) {
-      for (let i = powerups.length - 1; i >= 0; i--) {
-        const p = powerups[i];
-        if (Math.hypot(p.x - char.x, p.y - char.y) < 25 + p.radius) {
-          char.hp = Math.min(char.hp + 10, 100);
-          powerups.splice(i, 1);
-          sfx.play();
+    let imagesLoaded = 0;
+    const totalImages = Object.keys(images).length;
+
+    for (const key in images) {
+      images[key].onload = () => {
+        imagesLoaded++;
+        if (imagesLoaded === totalImages) {
+          draw();
+        }
+      };
+    }
+
+    function drawCharacter(name, char) {
+      const img = images[name];
+      ctx.drawImage(img, char.x - 25, char.y - 25, 50, 50);
+      ctx.fillStyle = "white";
+      ctx.font = "16px Arial";
+      ctx.fillText(name, char.x - 25, char.y - 35);
+      ctx.fillText(`HP: ${char.hp}`, char.x - 25, char.y + 40);
+    }
+
+    function activateSpecial() {
+      const char = characters[selected];
+      specialActive = true;
+      specialTimer = 20;
+      effects.push({ x: char.x, y: char.y, type: char.ability, time: 20 });
+      sfx.play();
+    }
+
+    function drawEnemy(enemy) {
+      // Leichtes Blinken bei Treffer (Animation)
+      if (enemy.hitTimer > 0) {
+        ctx.globalAlpha = 0.5 + 0.5 * Math.sin(enemy.hitTimer * 0.3);
+      }
+      const img = images["enemy"];
+      ctx.drawImage(img, enemy.x - 25, enemy.y - 25, 50, 50);
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = "white";
+      ctx.font = "12px Arial";
+      ctx.fillText(`HP: ${enemy.hp}`, enemy.x - 20, enemy.y + 35);
+    }
+
+    function drawPowerup(p) {
+      ctx.fillStyle = "gold";
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    function drawBase(base) {
+      const img = images["base"];
+      ctx.drawImage(img, base.x - base.width / 2, base.y - base.height / 2, base.width, base.height);
+      ctx.fillStyle = "white";
+      ctx.font = "14px Arial";
+      ctx.fillText(`Base HP: ${base.hp}`, base.x - base.width / 2, base.y + base.height / 2 + 15);
+    }
+
+    function updateEffects() {
+      effects.forEach((eff, i) => {
+        eff.time--;
+        ctx.strokeStyle = "white";
+        ctx.beginPath();
+        if (eff.type === "Punch") {
+          ctx.arc(eff.x, eff.y, 50, 0, Math.PI * 2);
+        } else if (eff.type === "Flame") {
+          ctx.rect(eff.x, eff.y - 10, 100, 20);
+        } else if (eff.type === "Dash") {
+          ctx.rect(eff.x - 20, eff.y - 40, 40, 80);
+        } else if (eff.type === "Boom") {
+          ctx.arc(eff.x, eff.y, 80, 0, Math.PI * 2);
+        }
+        ctx.stroke();
+        if (eff.time <= 0) effects.splice(i, 1);
+      });
+    }
+
+    function shootBullet(char, dirX, dirY) {
+      bullets.push({
+        x: char.x,
+        y: char.y,
+        radius: 5,
+        speed: 8,
+        dx: dirX,
+        dy: dirY,
+        owner: selected
+      });
+    }
+
+    let lastShootTime = 0;
+    const shootCooldown = 200; // ms
+
+    function update() {
+      if (isGameOver) return;
+
+      // Bewegung der Charaktere
+      for (const name in characters) {
+        const char = characters[name];
+        if (!char.alive) continue;
+
+        // Eingabe nur für den selektierten Charakter
+        if (name === selected) {
+          if (keys["arrowright"]) char.x += 5;
+          if (keys["arrowleft"]) char.x -= 5;
+          if (keys["arrowup"]) char.y -= 5;
+          if (keys["arrowdown"]) char.y += 5;
+
+          // Limits: Spieler darf nicht zu weit nach links (nicht in Basis-Bereich)
+          if (char.x < 120) char.x = 120;
+          if (char.x > canvas.width - 25) char.x = canvas.width - 25;
+          if (char.y < 25) char.y = 25;
+          if (char.y > canvas.height - 25) char.y = canvas.height - 25;
+        }
+
+        // Automatisch Schießen (wenn WASD gedrückt und cooldown vorbei)
+        const now = performance.now();
+        if (name === selected && now - lastShootTime > shootCooldown) {
+          if (keys["w"]) shootBullet(char, 0, -1);
+          if (keys["a"]) shootBullet(char, -1, 0);
+          if (keys["s"]) shootBullet(char, 0, 1);
+          if (keys["d"]) shootBullet(char, 1, 0);
+          if (keys["w"] || keys["a"] || keys["s"] || keys["d"]) {
+            lastShootTime = now;
+          }
         }
       }
-    }
-  }
 
-  bullets.forEach((b, bi) => {
-    b.x += b.dx;
-    b.y += b.dy;
-    for (let i = enemies.length - 1; i >= 0; i--) {
-      const e = enemies[i];
-      if (Math.hypot(b.x - e.x, b.y - e.y) < 20) {
-        e.hp--;
-        bullets.splice(bi, 1);
-        if (e.hp <= 0) enemies.splice(i, 1);
-        break;
+      // Update der Bullets
+      for (let i = bullets.length - 1; i >= 0; i--) {
+        const b = bullets[i];
+        b.x += b.dx * b.speed;
+        b.y += b.dy * b.speed;
+
+        // Entfernen wenn aus dem Bildschirm
+        if (b.x < 0 || b.x > canvas.width || b.y < 0 || b.y > canvas.height) {
+          bullets.splice(i, 1);
+          continue;
+        }
+
+        // Treffer bei Gegnern
+        for (let j = enemies.length - 1; j >= 0; j--) {
+          const e = enemies[j];
+          const dx = e.x - b.x;
+          const dy = e.y - b.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < e.radius + b.radius) {
+            e.hp--;
+            e.hitTimer = 10; // Für Trefferanimation
+            bullets.splice(i, 1);
+            if (e.hp <= 0) {
+              enemies.splice(j, 1);
+            }
+            break;
+          }
+        }
+      }
+
+      // Gegner bewegen & Kollisionen prüfen
+      for (let i = enemies.length - 1; i >= 0; i--) {
+        const enemy = enemies[i];
+        enemy.x -= enemy.speed;
+        if (enemy.hitTimer > 0) enemy.hitTimer--;
+
+        // Treffer Charakter
+        for (const name in characters) {
+          const char = characters[name];
+          if (!char.alive) continue;
+          const dx = enemy.x - char.x;
+          const dy = enemy.y - char.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < 25 + enemy.radius) {
+            char.hp -= 1;
+            if (char.hp <= 0) {
+              char.alive = false;
+            }
+          }
+        }
+
+        // Treffer Basen
+        for (let b = 0; b < bases.length; b++) {
+          const base = bases[b];
+          const dx = enemy.x - base.x;
+          const dy = enemy.y - base.y;
+          const distX = Math.abs(dx);
+          const distY = Math.abs(dy);
+          // Rechteck-Kollision einfacher Ansatz
+          if (distX < base.width / 2 + enemy.radius && distY < base.height / 2 + enemy.radius) {
+            base.hp -= 5;
+            enemies.splice(i, 1);
+            break;
+          }
+        }
+
+        // Entfernen wenn links raus (Basis vorbei)
+        if (enemy.x < -30) enemies.splice(i, 1);
+      }
+
+      // Powerups einsammeln
+      for (let i = powerups.length - 1; i >= 0; i--) {
+        const p = powerups[i];
+        for (const name in characters) {
+          const char = characters[name];
+          if (!char.alive) continue;
+          if (Math.hypot(p.x - char.x, p.y - char.y) < 25 + p.radius) {
+            char.hp += 10;
+            if (char.hp > 100) char.hp = 100;
+            powerups.splice(i, 1);
+            sfx.play();
+            break;
+          }
+        }
+      }
+
+      // Game Over Bedingungen prüfen:
+      const allBasesDestroyed = bases.every(base => base.hp <= 0);
+      const allCharactersDead = Object.values(characters).every(c => !c.alive);
+
+      if (allBasesDestroyed || allCharactersDead) {
+        isGameOver = true;
+        gameOverScreen.style.display = "block";
       }
     }
-  });
 
-  for (let i = enemies.length - 1; i >= 0; i--) {
-    const enemy = enemies[i];
-    enemy.x -= enemy.speed;
-    for (const name in characters) {
-      const char = characters[name];
-      if (char.hp > 0 && Math.hypot(enemy.x - char.x, enemy.y - char.y) < 25 + enemy.radius) {
-        char.hp--;
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(images["background"], 0, 0, canvas.width, canvas.height);
+
+      // Basen zeichnen
+      bases.forEach(drawBase);
+
+      // Charaktere zeichnen
+      for (const name in characters) {
+        const char = characters[name];
+        if (char.alive) drawCharacter(name, char);
+      }
+
+      // Gegner
+      enemies.forEach(drawEnemy);
+
+      // Powerups
+      powerups.forEach(drawPowerup);
+
+      // Effekte Spezialfähigkeiten
+      updateEffects();
+
+      // Bullets zeichnen
+      ctx.fillStyle = "yellow";
+      bullets.forEach(b => {
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      if (!isGameOver) {
+        update();
+        requestAnimationFrame(draw);
       }
     }
-    for (const base of baseStructures) {
-      if (Math.hypot(enemy.x - base.x, enemy.y - base.y) < 40) {
-        base.hp -= 1;
-      }
-    }
-    if (enemy.x < -20) enemies.splice(i, 1);
-  }
-
-  const allCharactersDead = Object.values(characters).every(c => c.hp <= 0);
-  const allBasesDestroyed = baseStructures.every(b => b.hp <= 0);
-  if (allCharactersDead || allBasesDestroyed) {
-    isGameOver = true;
-    gameOverScreen.style.display = "block";
-  }
-}
-
-function draw() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  for (const base of baseStructures) drawBase(base);
-  for (const name in characters) drawCharacter(name, characters[name]);
-
-  enemies.forEach(e => {
-    ctx.fillStyle = "brown";
-    ctx.beginPath();
-    ctx.arc(e.x, e.y, 20, 0, Math.PI * 2);
-    ctx.fill();
-  });
-
-  bullets.forEach(b => {
-    ctx.fillStyle = "yellow";
-    ctx.beginPath();
-    ctx.arc(b.x, b.y, 5, 0, Math.PI * 2);
-    ctx.fill();
-  });
-
-  powerups.forEach(p => {
-    ctx.fillStyle = "gold";
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-    ctx.fill();
-  });
-
-  updateEffects();
-
-  if (!isGameOver) {
-    update();
-    requestAnimationFrame(draw);
-  }
-}
-
-draw();
-</script>
+  </script>
 </body>
 </html>
