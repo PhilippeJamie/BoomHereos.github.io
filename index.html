@@ -152,7 +152,7 @@
 
   function drawSpaceship(ship) {
     if (ship.hp <= 0) return;
-    ctx.drawImage(images["spaceship"], ship.x - ship.width/2, ship.y - ship.height/2, ship.width, ship.height);
+    ctx.drawImage(images["spaceship"], ship.x - ship.width / 2, ship.y - ship.height / 2, ship.width, ship.height);
     ctx.fillStyle = "white";
     ctx.font = "14px Arial";
     ctx.fillText(`HP: ${ship.hp}`, ship.x - 30, ship.y + 50);
@@ -202,6 +202,13 @@
     ctx.fill();
   }
 
+  function drawBullet(bullet) {
+    ctx.fillStyle = "cyan";
+    ctx.beginPath();
+    ctx.arc(bullet.x, bullet.y, bullet.radius, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
   function updateEffects() {
     for (let i = effects.length - 1; i >= 0; i--) {
       const eff = effects[i];
@@ -211,4 +218,139 @@
       if (eff.type === "Punch") {
         ctx.arc(eff.x, eff.y, 50, 0, Math.PI * 2);
       } else if (eff.type === "Flame") {
-        ctx.rect(eff.x, eff.y - 10,
+        ctx.rect(eff.x, eff.y - 10, 60, 20);
+      } else if (eff.type === "Dash") {
+        ctx.moveTo(eff.x - 30, eff.y);
+        ctx.lineTo(eff.x + 30, eff.y);
+      } else if (eff.type === "Boom") {
+        ctx.arc(eff.x, eff.y, 70, 0, Math.PI * 2);
+      }
+      ctx.stroke();
+
+      if (eff.time <= 0) effects.splice(i, 1);
+    }
+  }
+
+  // Kollisionen prüfen und Spiel-Logik updaten
+  function update() {
+    // Spezial-Timer runterzählen
+    if (specialActive) {
+      specialTimer--;
+      if (specialTimer <= 0) specialActive = false;
+    }
+
+    // Gegner bewegen
+    enemies.forEach(enemy => {
+      if (!enemy.dying) enemy.x -= enemy.speed;
+
+      // Wenn Gegner links an Raumschiffen ankommen -> Schaden an Raumschiff
+      spaceships.forEach(ship => {
+        if (ship.hp > 0 && !enemy.dying) {
+          const distX = Math.abs(enemy.x - ship.x);
+          const distY = Math.abs(enemy.y - ship.y);
+          if (distX < 40 && distY < 40) {
+            ship.hp -= 10;
+            enemy.dying = true;
+            sfxHit.play();
+            if (ship.hp <= 0) ship.hp = 0;
+          }
+        }
+      });
+
+      // Wenn Gegner zu weit links raus sind, Game Over
+      if (enemy.x < 0) {
+        isGameOver = true;
+      }
+    });
+
+    // Kugeln bewegen und checken ob sie Gegner treffen
+    for (let i = bullets.length - 1; i >= 0; i--) {
+      const bullet = bullets[i];
+      bullet.x += bullet.speed;
+
+      // Kugeln aus Bildschirm entfernen
+      if (bullet.x > canvas.width) {
+        bullets.splice(i, 1);
+        continue;
+      }
+
+      // Kollision mit Gegnern
+      for (let j = enemies.length - 1; j >= 0; j--) {
+        const enemy = enemies[j];
+        if (enemy.dying) continue;
+
+        const dx = bullet.x - enemy.x;
+        const dy = bullet.y - enemy.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < bullet.radius + enemy.radius) {
+          enemy.hp--;
+          bullets.splice(i, 1);
+          sfxHit.play();
+          if (enemy.hp <= 0) {
+            enemy.dying = true;
+            enemy.dyingFrame = 0;
+          }
+          break;
+        }
+      }
+    }
+
+    // Powerups einsammeln (optional – je nachdem, was sie bewirken sollen)
+    // Hier kann noch Logik hinzugefügt werden
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Hintergrund zeichnen
+    if (images["background"].complete) {
+      ctx.drawImage(images["background"], 0, 0, canvas.width, canvas.height);
+    } else {
+      ctx.fillStyle = "#222";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
+    // Raumschiffe zeichnen
+    spaceships.forEach(drawSpaceship);
+
+    // Charaktere zeichnen
+    for (const name in characters) {
+      drawCharacter(name, characters[name]);
+    }
+
+    // Gegner zeichnen
+    enemies.forEach(drawEnemy);
+
+    // Powerups zeichnen
+    powerups.forEach(drawPowerup);
+
+    // Effekte zeichnen
+    updateEffects();
+
+    // Kugeln zeichnen
+    bullets.forEach(drawBullet);
+
+    // Game Over anzeigen
+    if (isGameOver) {
+      gameOverScreen.style.display = "block";
+      gameOverScreen.textContent = "Game Over!";
+    } else {
+      gameOverScreen.style.display = "none";
+    }
+  }
+
+  function gameLoop() {
+    if (!isGameOver) {
+      update();
+      draw();
+      requestAnimationFrame(gameLoop);
+    } else {
+      draw(); // damit Game Over Screen sichtbar bleibt
+    }
+  }
+
+  // Start des Spiels
+  requestAnimationFrame(gameLoop);
+</script>
+</body>
+</html>
