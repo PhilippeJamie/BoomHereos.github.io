@@ -7,21 +7,8 @@
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body, html { width: 100%; height: 100%; font-family: Arial, sans-serif; background: #222; overflow: hidden; }
-    canvas {
-      display: block;
-      background: none;
-      margin: auto;
-      position: absolute;
-      top: 0; bottom: 0; left: 0; right: 0;
-      border: 5px solid #fff;
-    }
-    #ui {
-      position: absolute;
-      top: 10px; left: 10px;
-      color: white;
-      font-size: 18px;
-      z-index: 10;
-    }
+    canvas { display: block; background: none; margin: auto; position: absolute; top: 0; bottom: 0; left: 0; right: 0; border: 5px solid #fff; }
+    #ui { position: absolute; top: 10px; left: 10px; color: white; font-size: 18px; z-index: 10; }
     #gameOver {
       display: none;
       position: absolute;
@@ -30,374 +17,354 @@
       transform: translate(-50%, -50%);
       color: red;
       font-size: 36px;
-      background: rgba(0, 0, 0, 0.85);
-      padding: 30px 40px;
-      border: 3px solid white;
+      background: rgba(0, 0, 0, 0.7);
+      padding: 20px;
+      border: 2px solid white;
       text-align: center;
-      font-weight: bold;
-      z-index: 20;
+      width: 400px;
+      font-family: 'Arial Black', sans-serif;
     }
   </style>
 </head>
 <body>
-  <div id="ui">Boom Heroes - 1–4 für Helden, Pfeile bewegen, Leertaste = Spezial, WASD = Schießen</div>
-  <div id="gameOver">GAME OVER - Seite neu laden zum Neustart</div>
+  <div id="ui">Boom Heroes - 1–4 für Helden, Pfeile bewegen, Leertaste = Spezial, F für Schießen</div>
+  <div id="gameOver"></div>
   <canvas id="gameCanvas" width="800" height="600"></canvas>
   <audio id="bgMusic" loop autoplay>
     <source src="https://cdn.pixabay.com/download/audio/2022/10/19/audio_78335c9c96.mp3?filename=battle-theme-ambient-122949.mp3" type="audio/mpeg" />
   </audio>
-  <script>
-    const canvas = document.getElementById("gameCanvas");
-    const ctx = canvas.getContext("2d");
-    const gameOverScreen = document.getElementById("gameOver");
+<script>
+  const canvas = document.getElementById("gameCanvas");
+  const ctx = canvas.getContext("2d");
+  const gameOverScreen = document.getElementById("gameOver");
 
-    const music = document.getElementById("bgMusic");
-    music.volume = 0.3;
+  const music = document.getElementById("bgMusic");
+  music.volume = 0.3;
 
-    const sfx = new Audio("https://cdn.pixabay.com/download/audio/2022/03/22/audio_d98f38fd7a.mp3?filename=retro-game-powerup-21369.mp3");
+  const sfxShoot = new Audio("https://cdn.pixabay.com/download/audio/2022/03/22/audio_d98f38fd7a.mp3?filename=retro-game-powerup-21369.mp3");
+  const sfxHit = new Audio("https://cdn.pixabay.com/download/audio/2022/03/22/audio_f3b7dbaeb0.mp3?filename=retro-game-impact-24975.mp3");
 
-    const characters = {
-      "Max Blaze": { x: 150, y: 300, color: "red", ability: "Punch", hp: 100, alive: true },
-      "Torchbot": { x: 150, y: 360, color: "orange", ability: "Flame", hp: 100, alive: true },
-      "Volt Girl": { x: 150, y: 420, color: "purple", ability: "Dash", hp: 100, alive: true },
-      "Boomimp": { x: 150, y: 480, color: "green", ability: "Boom", hp: 100, alive: true }
+  // Charaktere
+  const characters = {
+    "Max Blaze": { x: 150, y: 300, color: "red", ability: "Punch", hp: 100, alive: true },
+    "Torchbot": { x: 150, y: 360, color: "orange", ability: "Flame", hp: 100, alive: true },
+    "Volt Girl": { x: 150, y: 420, color: "purple", ability: "Dash", hp: 100, alive: true },
+    "Boomimp": { x: 150, y: 480, color: "green", ability: "Boom", hp: 100, alive: true }
+  };
+
+  let selected = "Max Blaze";
+  let specialActive = false;
+  let specialTimer = 0;
+
+  // Raumschiffe links, 4 Stück, je 1000 hp, schützen die Charaktere
+  const spaceships = [
+    { x: 50, y: 280, width: 70, height: 70, hp: 1000 },
+    { x: 50, y: 340, width: 70, height: 70, hp: 1000 },
+    { x: 50, y: 400, width: 70, height: 70, hp: 1000 },
+    { x: 50, y: 460, width: 70, height: 70, hp: 1000 }
+  ];
+
+  const enemies = [];
+  const effects = [];
+  const powerups = [];
+  const bullets = [];
+
+  let isGameOver = false;
+
+  // Gegner spawnen
+  function spawnEnemy() {
+    if (!isGameOver) {
+      enemies.push({
+        x: 800,
+        y: Math.random() * 550 + 25,
+        radius: 20,
+        speed: 1 + Math.random() * 1,
+        hp: Math.floor(Math.random() * 3) + 1, // braucht 1-3 Schüsse
+        dying: false,
+        dyingFrame: 0
+      });
+    }
+  }
+
+  function spawnPowerup() {
+    if (!isGameOver) {
+      powerups.push({ x: Math.random() * 700 + 50, y: Math.random() * 500 + 50, radius: 10 });
+    }
+  }
+
+  setInterval(spawnEnemy, 2500);
+  setInterval(spawnPowerup, 8000);
+
+  document.addEventListener("keydown", e => {
+    if (isGameOver) return;
+    const char = characters[selected];
+    if (!char.alive) return;
+
+    if (e.key === "ArrowRight") {
+      if (char.x + 10 < 700) char.x += 10;
+    }
+    if (e.key === "ArrowLeft") {
+      if (char.x - 10 > 150) char.x -= 10; // nicht in Raumschiffe reinlaufen
+    }
+    if (e.key === "ArrowUp") {
+      if (char.y - 10 > 50) char.y -= 10;
+    }
+    if (e.key === "ArrowDown") {
+      if (char.y + 10 < 550) char.y += 10;
+    }
+    if (e.key === "1") selected = "Max Blaze";
+    if (e.key === "2") selected = "Torchbot";
+    if (e.key === "3") selected = "Volt Girl";
+    if (e.key === "4") selected = "Boomimp";
+    if (e.key === " ") activateSpecial();
+    if (e.key.toLowerCase() === "f") shootBullet();
+  });
+
+  // Bilder laden
+  const images = {
+    "Max Blaze": new Image(),
+    "Torchbot": new Image(),
+    "Volt Girl": new Image(),
+    "Boomimp": new Image(),
+    "enemy": new Image(),
+    "background": new Image(),
+    "spaceship": new Image()
+  };
+
+  images["background"].src = "IMG_4485.png";
+  images["Max Blaze"].src = "Max_blaze.png";
+  images["Torchbot"].src = "Torchbot.png";
+  images["Volt Girl"].src = "Volt_girl.png";
+  images["Boomimp"].src = "Boomimp.png";
+  images["enemy"].src = "meteor_enemy.png";
+  images["spaceship"].src = "spaceship.png"; // Du kannst hier dein Raumschiff-Bild anpassen
+
+  // Sicherstellen, dass alle Bilder geladen sind
+  let imagesLoaded = 0;
+  const totalImages = Object.keys(images).length;
+
+  for (const key in images) {
+    images[key].onload = () => {
+      imagesLoaded++;
+      if (imagesLoaded === totalImages) {
+        draw();
+      }
     };
+  }
 
-    let selected = "Max Blaze";
-    let specialActive = false;
-    let specialTimer = 0;
-    const enemies = [];
-    const effects = [];
-    const powerups = [];
-    const bullets = [];
+  function drawCharacter(name, char) {
+    if (!char.alive) return;
+    const img = images[name];
+    ctx.drawImage(img, char.x - 25, char.y - 25, 50, 50);
+    ctx.fillStyle = "white";
+    ctx.font = "16px Arial";
+    ctx.fillText(name, char.x - 25, char.y - 35);
+    ctx.fillText(`HP: ${char.hp}`, char.x - 25, char.y + 40);
+  }
 
-    // Vier Basen (Raumschiffe) links
-    const bases = [
-      { x: 60, y: 300, hp: 1000, width: 50, height: 80 },
-      { x: 60, y: 360, hp: 1000, width: 50, height: 80 },
-      { x: 60, y: 420, hp: 1000, width: 50, height: 80 },
-      { x: 60, y: 480, hp: 1000, width: 50, height: 80 }
-    ];
+  function drawSpaceship(ship) {
+    ctx.drawImage(images["spaceship"], ship.x - ship.width/2, ship.y - ship.height/2, ship.width, ship.height);
+    ctx.fillStyle = "white";
+    ctx.font = "14px Arial";
+    ctx.fillText(`HP: ${ship.hp}`, ship.x - 30, ship.y + 50);
+  }
 
-    let isGameOver = false;
+  function activateSpecial() {
+    const char = characters[selected];
+    if (!char.alive) return;
+    specialActive = true;
+    specialTimer = 20;
+    effects.push({ x: char.x, y: char.y, type: char.ability, time: 20 });
+    sfxShoot.play();
+  }
 
-    function spawnEnemy() {
-      if (!isGameOver) {
-        enemies.push({
-          x: 800,
-          y: Math.random() * 550 + 25,
-          radius: 20,
-          speed: 1.5 + Math.random(),
-          hp: 1 + Math.floor(Math.random() * 3), // 1-3 Schüsse zum Zerstören
-          hitTimer: 0 // Für Animation
-        });
-      }
+  // Bullets werden in Richtung rechts geschossen, auch oben und unten schießen
+  function shootBullet() {
+    const char = characters[selected];
+    if (!char.alive) return;
+
+    // Bullet Richtung: 0 = gerade rechts, 1 = oben-rechts, 2 = unten-rechts
+    // Steuerung mit Pfeiltasten: wenn Up oder Down gedrückt, passt Richtung
+    // Einfachheitshalber: Wenn Up & Down gedrückt nicht gleichzeitig (Keydown Event), hier nur gerade rechts
+    bullets.push({
+      x: char.x + 20,
+      y: char.y,
+}
+
+function drawEnemy(enemy) {
+if (enemy.dying) {
+// Explosion Animation
+ctx.fillStyle = rgba(255, ${Math.floor(255 - enemy.dyingFrame * 10)}, 0, 0.7);
+ctx.beginPath();
+ctx.arc(enemy.x, enemy.y, 20 + enemy.dyingFrame*3, 0, Math.PI * 2);
+ctx.fill();  enemy.dyingFrame++;
+  if (enemy.dyingFrame > 10) {
+    const index = enemies.indexOf(enemy);
+    if (index > -1) enemies.splice(index, 1);
+  }
+  return;
+}
+ctx.drawImage(images["enemy"], enemy.x - 25, enemy.y - 25, 50, 50);
+}
+
+function drawPowerup(p) {
+ctx.fillStyle = "gold";
+ctx.beginPath();
+ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+ctx.fill();
+}
+
+function updateEffects() {
+effects.forEach((eff, i) => {
+eff.time--;
+ctx.strokeStyle = "white";
+ctx.beginPath();
+if (eff.type === "Punch") {
+ctx.arc(eff.x, eff.y, 50, 0, Math.PI * 2);
+} else if (eff.type === "Flame") {
+ctx.rect(eff.x, eff.y - 10, 100, 20);
+} else if (eff.type === "Dash") {
+ctx.rect(eff.x - 20, eff.y - 40, 40, 80);
+} else if (eff.type === "Boom") {
+ctx.arc(eff.x, eff.y, 80, 0, Math.PI * 2);
+}
+ctx.stroke();
+if (eff.time <= 0) effects.splice(i, 1);
+});
+}
+
+function updateBullets() {
+bullets.forEach((b, i) => {
+b.x += b.speed;
+// Einfach nur gerade rechts schießen
+for (let j = enemies.length - 1; j >= 0; j--) {
+const enemy = enemies[j];
+if (!enemy.dying && Math.hypot(b.x - enemy.x, b.y - enemy.y) < b.radius + enemy.radius) {
+enemy.hp--;
+bullets.splice(i, 1);
+if (enemy.hp <= 0) {
+enemy.dying = true;
+enemy.dyingFrame = 0;
+sfxHit.play();
+}
+break;
+}
+}
+if (b.x > canvas.width + 10) bullets.splice(i, 1);
+});
+}
+
+function update() {
+// Prüfe ob Spiel vorbei ist: Alle Charaktere tot oder alle Raumschiffe zerstört
+const allCharsDead = Object.values(characters).every(c => !c.alive || c.hp <= 0);
+const allShipsDead = spaceships.every(s => s.hp <= 0);
+if (allCharsDead || allShipsDead) {
+isGameOver = true;
+gameOverScreen.style.display = "block";
+gameOverScreen.innerHTML = allCharsDead
+? "GAME OVER - Alle Helden sind gefallen.<br>Seite neu laden zum Neustart."
+: "GAME OVER - Alle Raumschiffe wurden zerstört.<br>Seite neu laden zum Neustart.";
+return;
+}// Update Charaktere
+for (const name in characters) {
+  const c = characters[name];
+  if (c.hp <= 0 && c.alive) {
+    c.alive = false;
+  }
+}
+
+// Gegner bewegen & Kollision mit Charakteren oder Raumschiffen
+for (let i = enemies.length - 1; i >= 0; i--) {
+  const enemy = enemies[i];
+  if (enemy.dying) {
+    // Animation handled in draw
+    continue;
+  }
+  enemy.x -= enemy.speed;
+
+  // Kollisionsabfrage mit Charakteren
+  for (const name in characters) {
+    const c = characters[name];
+    if (!c.alive) continue;
+    const dx = enemy.x - c.x;
+    const dy = enemy.y - c.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist < 25 + enemy.radius) {
+      c.hp -= 1;
+      if (c.hp <= 0) c.alive = false;
+      enemies.splice(i, 1);
+      break;
     }
-    function spawnPowerup() {
-      if (!isGameOver) {
-        powerups.push({
-          x: Math.random() * 700 + 100,
-          y: Math.random() * 500 + 50,
-          radius: 10
-        });
-      }
+  }
+
+  // Kollisionsabfrage mit Raumschiffen
+  for (let s of spaceships) {
+    if (s.hp <= 0) continue;
+    const dx = enemy.x - s.x;
+    const dy = enemy.y - s.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist < 35 + enemy.radius) {
+      s.hp -= 10;
+      enemies.splice(i, 1);
+      break;
     }
+  }
 
-    setInterval(spawnEnemy, 2500);
-    setInterval(spawnPowerup, 8000);
+  if (enemy.x < -20) enemies.splice(i, 1);
+}
 
-    // Bewegung & Schießen
-    const keys = {};
-    document.addEventListener("keydown", e => {
-      keys[e.key.toLowerCase()] = true;
-      if (isGameOver) return;
-
-      if (e.key === "1") selected = "Max Blaze";
-      if (e.key === "2") selected = "Torchbot";
-      if (e.key === "3") selected = "Volt Girl";
-      if (e.key === "4") selected = "Boomimp";
-
-      if (e.key === " ") activateSpecial();
-    });
-    document.addEventListener("keyup", e => {
-      keys[e.key.toLowerCase()] = false;
-    });
-
-    const images = {
-      "Max Blaze": new Image(),
-      "Torchbot": new Image(),
-      "Volt Girl": new Image(),
-      "Boomimp": new Image(),
-      "enemy": new Image(),
-      "background": new Image(),
-      "base": new Image()
-    };
-
-    images["background"].src = "IMG_4485.png";
-    images["Max Blaze"].src = "Max_blaze.png";
-    images["Torchbot"].src = "Torchbot.png";
-    images["Volt Girl"].src = "Volt_girl.png";
-    images["Boomimp"].src = "Boomimp.png";
-    images["enemy"].src = "meteor_enemy.png";
-    images["base"].src = "spaceship_base.png"; // Bild für Raumschiffe
-
-    let imagesLoaded = 0;
-    const totalImages = Object.keys(images).length;
-
-    for (const key in images) {
-      images[key].onload = () => {
-        imagesLoaded++;
-        if (imagesLoaded === totalImages) {
-          draw();
-        }
-      };
+// Powerups einsammeln
+for (let i = powerups.length - 1; i >= 0; i--) {
+  const p = powerups[i];
+  for (const name in characters) {
+    const c = characters[name];
+    if (!c.alive) continue;
+    if (Math.hypot(p.x - c.x, p.y - c.y) < 25 + p.radius) {
+      c.hp += 10;
+      if (c.hp > 100) c.hp = 100;
+      powerups.splice(i, 1);
+      sfxShoot.play();
+      break;
     }
+  }
+}
 
-    function drawCharacter(name, char) {
-      const img = images[name];
-      ctx.drawImage(img, char.x - 25, char.y - 25, 50, 50);
-      ctx.fillStyle = "white";
-      ctx.font = "16px Arial";
-      ctx.fillText(name, char.x - 25, char.y - 35);
-      ctx.fillText(`HP: ${char.hp}`, char.x - 25, char.y + 40);
-    }
+updateEffects();
+updateBullets();
+}
 
-    function activateSpecial() {
-      const char = characters[selected];
-      specialActive = true;
-      specialTimer = 20;
-      effects.push({ x: char.x, y: char.y, type: char.ability, time: 20 });
-      sfx.play();
-    }
+function draw() {
+ctx.clearRect(0, 0, canvas.width, canvas.height);
+ctx.drawImage(images["background"], 0, 0, canvas.width, canvas.height);// Raumschiffe zeichnen
+for (const ship of spaceships) {
+  if (ship.hp > 0) drawSpaceship(ship);
+}
 
-    function drawEnemy(enemy) {
-      // Leichtes Blinken bei Treffer (Animation)
-      if (enemy.hitTimer > 0) {
-        ctx.globalAlpha = 0.5 + 0.5 * Math.sin(enemy.hitTimer * 0.3);
-      }
-      const img = images["enemy"];
-      ctx.drawImage(img, enemy.x - 25, enemy.y - 25, 50, 50);
-      ctx.globalAlpha = 1;
-      ctx.fillStyle = "white";
-      ctx.font = "12px Arial";
-      ctx.fillText(`HP: ${enemy.hp}`, enemy.x - 20, enemy.y + 35);
-    }
+// Charaktere zeichnen
+for (const name in characters) {
+  drawCharacter(name, characters[name]);
+}
 
-    function drawPowerup(p) {
-      ctx.fillStyle = "gold";
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-      ctx.fill();
-    }
+// Gegner, Powerups, Effekte, Bullets zeichnen
+enemies.forEach(drawEnemy);
+powerups.forEach(drawPowerup);
 
-    function drawBase(base) {
-      const img = images["base"];
-      ctx.drawImage(img, base.x - base.width / 2, base.y - base.height / 2, base.width, base.height);
-      ctx.fillStyle = "white";
-      ctx.font = "14px Arial";
-      ctx.fillText(`Base HP: ${base.hp}`, base.x - base.width / 2, base.y + base.height / 2 + 15);
-    }
+// Spezial Effekte
+updateEffects();
 
-    function updateEffects() {
-      effects.forEach((eff, i) => {
-        eff.time--;
-        ctx.strokeStyle = "white";
-        ctx.beginPath();
-        if (eff.type === "Punch") {
-          ctx.arc(eff.x, eff.y, 50, 0, Math.PI * 2);
-        } else if (eff.type === "Flame") {
-          ctx.rect(eff.x, eff.y - 10, 100, 20);
-        } else if (eff.type === "Dash") {
-          ctx.rect(eff.x - 20, eff.y - 40, 40, 80);
-        } else if (eff.type === "Boom") {
-          ctx.arc(eff.x, eff.y, 80, 0, Math.PI * 2);
-        }
-        ctx.stroke();
-        if (eff.time <= 0) effects.splice(i, 1);
-      });
-    }
+// Bullets zeichnen
+bullets.forEach(b => {
+  ctx.fillStyle = "yellow";
+  ctx.beginPath();
+  ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
+  ctx.fill();
+});
 
-    function shootBullet(char, dirX, dirY) {
-      bullets.push({
-        x: char.x,
-        y: char.y,
-        radius: 5,
-        speed: 8,
-        dx: dirX,
-        dy: dirY,
-        owner: selected
-      });
-    }
+if (!isGameOver) {
+  update();
+  requestAnimationFrame(draw);
+}
+}
+</script>
 
-    let lastShootTime = 0;
-    const shootCooldown = 200; // ms
-
-    function update() {
-      if (isGameOver) return;
-
-      // Bewegung der Charaktere
-      for (const name in characters) {
-        const char = characters[name];
-        if (!char.alive) continue;
-
-        // Eingabe nur für den selektierten Charakter
-        if (name === selected) {
-          if (keys["arrowright"]) char.x += 5;
-          if (keys["arrowleft"]) char.x -= 5;
-          if (keys["arrowup"]) char.y -= 5;
-          if (keys["arrowdown"]) char.y += 5;
-
-          // Limits: Spieler darf nicht zu weit nach links (nicht in Basis-Bereich)
-          if (char.x < 120) char.x = 120;
-          if (char.x > canvas.width - 25) char.x = canvas.width - 25;
-          if (char.y < 25) char.y = 25;
-          if (char.y > canvas.height - 25) char.y = canvas.height - 25;
-        }
-
-        // Automatisch Schießen (wenn WASD gedrückt und cooldown vorbei)
-        const now = performance.now();
-        if (name === selected && now - lastShootTime > shootCooldown) {
-          if (keys["w"]) shootBullet(char, 0, -1);
-          if (keys["a"]) shootBullet(char, -1, 0);
-          if (keys["s"]) shootBullet(char, 0, 1);
-          if (keys["d"]) shootBullet(char, 1, 0);
-          if (keys["w"] || keys["a"] || keys["s"] || keys["d"]) {
-            lastShootTime = now;
-          }
-        }
-      }
-
-      // Update der Bullets
-      for (let i = bullets.length - 1; i >= 0; i--) {
-        const b = bullets[i];
-        b.x += b.dx * b.speed;
-        b.y += b.dy * b.speed;
-
-        // Entfernen wenn aus dem Bildschirm
-        if (b.x < 0 || b.x > canvas.width || b.y < 0 || b.y > canvas.height) {
-          bullets.splice(i, 1);
-          continue;
-        }
-
-        // Treffer bei Gegnern
-        for (let j = enemies.length - 1; j >= 0; j--) {
-          const e = enemies[j];
-          const dx = e.x - b.x;
-          const dy = e.y - b.y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist < e.radius + b.radius) {
-            e.hp--;
-            e.hitTimer = 10; // Für Trefferanimation
-            bullets.splice(i, 1);
-            if (e.hp <= 0) {
-              enemies.splice(j, 1);
-            }
-            break;
-          }
-        }
-      }
-
-      // Gegner bewegen & Kollisionen prüfen
-      for (let i = enemies.length - 1; i >= 0; i--) {
-        const enemy = enemies[i];
-        enemy.x -= enemy.speed;
-        if (enemy.hitTimer > 0) enemy.hitTimer--;
-
-        // Treffer Charakter
-        for (const name in characters) {
-          const char = characters[name];
-          if (!char.alive) continue;
-          const dx = enemy.x - char.x;
-          const dy = enemy.y - char.y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist < 25 + enemy.radius) {
-            char.hp -= 1;
-            if (char.hp <= 0) {
-              char.alive = false;
-            }
-          }
-        }
-
-        // Treffer Basen
-        for (let b = 0; b < bases.length; b++) {
-          const base = bases[b];
-          const dx = enemy.x - base.x;
-          const dy = enemy.y - base.y;
-          const distX = Math.abs(dx);
-          const distY = Math.abs(dy);
-          // Rechteck-Kollision einfacher Ansatz
-          if (distX < base.width / 2 + enemy.radius && distY < base.height / 2 + enemy.radius) {
-            base.hp -= 5;
-            enemies.splice(i, 1);
-            break;
-          }
-        }
-
-        // Entfernen wenn links raus (Basis vorbei)
-        if (enemy.x < -30) enemies.splice(i, 1);
-      }
-
-      // Powerups einsammeln
-      for (let i = powerups.length - 1; i >= 0; i--) {
-        const p = powerups[i];
-        for (const name in characters) {
-          const char = characters[name];
-          if (!char.alive) continue;
-          if (Math.hypot(p.x - char.x, p.y - char.y) < 25 + p.radius) {
-            char.hp += 10;
-            if (char.hp > 100) char.hp = 100;
-            powerups.splice(i, 1);
-            sfx.play();
-            break;
-          }
-        }
-      }
-
-      // Game Over Bedingungen prüfen:
-      const allBasesDestroyed = bases.every(base => base.hp <= 0);
-      const allCharactersDead = Object.values(characters).every(c => !c.alive);
-
-      if (allBasesDestroyed || allCharactersDead) {
-        isGameOver = true;
-        gameOverScreen.style.display = "block";
-      }
-    }
-
-    function draw() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(images["background"], 0, 0, canvas.width, canvas.height);
-
-      // Basen zeichnen
-      bases.forEach(drawBase);
-
-      // Charaktere zeichnen
-      for (const name in characters) {
-        const char = characters[name];
-        if (char.alive) drawCharacter(name, char);
-      }
-
-      // Gegner
-      enemies.forEach(drawEnemy);
-
-      // Powerups
-      powerups.forEach(drawPowerup);
-
-      // Effekte Spezialfähigkeiten
-      updateEffects();
-
-      // Bullets zeichnen
-      ctx.fillStyle = "yellow";
-      bullets.forEach(b => {
-        ctx.beginPath();
-        ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
-        ctx.fill();
-      });
-
-      if (!isGameOver) {
-        update();
-        requestAnimationFrame(draw);
-      }
-    }
-  </script>
-</body>
-</html>
+</body> </html> ```
