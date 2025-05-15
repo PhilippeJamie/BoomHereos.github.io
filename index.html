@@ -24,7 +24,7 @@
   </style>
 </head>
 <body>
-<div id="ui">Boom Heroes - 1–4 für Helden, Pfeile bewegen, Leertaste = Spezial</div>
+<div id="ui">Boom Heroes - 1–4 für Helden, Pfeile bewegen, Leertaste = Spezial, S = Schuss</div>
 <div id="gameOver">GAME OVER - Seite neu laden zum Neustart</div>
 <canvas id="gameCanvas" width="800" height="600"></canvas>
 <audio id="bgMusic" loop autoplay>
@@ -39,6 +39,7 @@
   music.volume = 0.3;
 
   const sfx = new Audio("https://cdn.pixabay.com/download/audio/2022/03/22/audio_d98f38fd7a.mp3?filename=retro-game-powerup-21369.mp3");
+  const shootSfx = new Audio("https://cdn.pixabay.com/download/audio/2022/03/15/audio_c202e68957.mp3?filename=laser-shoot-81267.mp3");
 
   const characters = {
     "Max Blaze": { x: 150, y: 300, color: "red", ability: "Punch", hp: 100 },
@@ -51,6 +52,7 @@
   let specialActive = false;
   let specialTimer = 0;
   const enemies = [];
+  const bullets = [];
   const effects = [];
   const powerups = [];
 
@@ -58,7 +60,7 @@
 
   function spawnEnemy() {
     if (!isGameOver) {
-      enemies.push({ x: 800, y: Math.random() * 550 + 25, radius: 20, speed: 1.5 });
+      enemies.push({ x: 800, y: Math.random() * 550 + 25, radius: 20, speed: 1.5, hp: 3 });
     }
   }
   function spawnPowerup() {
@@ -82,6 +84,7 @@
     if (e.key === "3") selected = "Volt Girl";
     if (e.key === "4") selected = "Boomimp";
     if (e.key === " ") activateSpecial();
+    if (e.key === "s" || e.key === "S") shootBullet();
   });
 
   const images = {
@@ -100,16 +103,13 @@
   images["Boomimp"].src = "Boomimp.png";
   images["enemy"].src = "meteor_enemy.png";
 
-  // Sicherstellen, dass alle Bilder geladen sind
   let imagesLoaded = 0;
   const totalImages = Object.keys(images).length;
 
   for (const key in images) {
     images[key].onload = () => {
       imagesLoaded++;
-      if (imagesLoaded === totalImages) {
-        draw(); // Wenn alle Bilder geladen sind, Zeichnen starten
-      }
+      if (imagesLoaded === totalImages) draw();
     };
   }
 
@@ -129,6 +129,41 @@
     sfx.play();
   }
 
+  function shootBullet() {
+    const char = characters[selected];
+    let bullet = {
+      x: char.x + 25,
+      y: char.y,
+      speed: 6,
+      color: "yellow",
+      size: 4,
+      damage: 1
+    };
+    if (selected === "Torchbot") {
+      bullet.color = "orange";
+      bullet.size = 6;
+      bullet.damage = 2;
+    } else if (selected === "Volt Girl") {
+      bullet.color = "violet";
+      bullet.speed = 10;
+      bullet.damage = 1;
+    } else if (selected === "Boomimp") {
+      bullet.color = "green";
+      bullet.size = 8;
+      bullet.damage = 3;
+      bullet.speed = 4;
+    }
+    bullets.push(bullet);
+    shootSfx.play();
+  }
+
+  function drawBullet(b) {
+    ctx.fillStyle = b.color;
+    ctx.beginPath();
+    ctx.arc(b.x, b.y, b.size, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
   function drawEnemy(enemy) {
     const img = images["enemy"];
     ctx.drawImage(img, enemy.x - 25, enemy.y - 25, 50, 50);
@@ -146,15 +181,10 @@
       eff.time--;
       ctx.strokeStyle = "white";
       ctx.beginPath();
-      if (eff.type === "Punch") {
-        ctx.arc(eff.x, eff.y, 50, 0, Math.PI * 2);
-      } else if (eff.type === "Flame") {
-        ctx.rect(eff.x, eff.y - 10, 100, 20);
-      } else if (eff.type === "Dash") {
-        ctx.rect(eff.x - 20, eff.y - 40, 40, 80);
-      } else if (eff.type === "Boom") {
-        ctx.arc(eff.x, eff.y, 80, 0, Math.PI * 2);
-      }
+      if (eff.type === "Punch") ctx.arc(eff.x, eff.y, 50, 0, Math.PI * 2);
+      if (eff.type === "Flame") ctx.rect(eff.x, eff.y - 10, 100, 20);
+      if (eff.type === "Dash") ctx.rect(eff.x - 20, eff.y - 40, 40, 80);
+      if (eff.type === "Boom") ctx.arc(eff.x, eff.y, 80, 0, Math.PI * 2);
       ctx.stroke();
       if (eff.time <= 0) effects.splice(i, 1);
     });
@@ -169,31 +199,32 @@
     }
 
     for (let i = enemies.length - 1; i >= 0; i--) {
-      const enemy = enemies[i];
-      enemy.x -= enemy.speed;
+      const e = enemies[i];
+      e.x -= e.speed;
+      if (Math.hypot(e.x - char.x, e.y - char.y) < 25 + e.radius) char.hp--;
 
-      const dx = enemy.x - char.x;
-      const dy = enemy.y - char.y;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist < 25 + enemy.radius) char.hp -= 1;
+      for (let j = bullets.length - 1; j >= 0; j--) {
+        const b = bullets[j];
+        if (Math.hypot(b.x - e.x, b.y - e.y) < b.size + e.radius) {
+          e.hp -= b.damage;
+          bullets.splice(j, 1);
+          if (e.hp <= 0) enemies.splice(i, 1);
+          break;
+        }
+      }
 
-      effects.forEach(eff => {
-        let hit = false;
-        if (eff.type === "Punch" && Math.hypot(eff.x - enemy.x, eff.y - enemy.y) < 50) hit = true;
-        if (eff.type === "Flame" && enemy.x > eff.x && enemy.x < eff.x + 100 && Math.abs(enemy.y - eff.y) < 20) hit = true;
-        if (eff.type === "Dash" && Math.abs(enemy.x - eff.x) < 20 && Math.abs(enemy.y - eff.y) < 40) hit = true;
-        if (eff.type === "Boom" && Math.hypot(eff.x - enemy.x, eff.y - enemy.y) < 80) hit = true;
-        if (hit) enemies.splice(i, 1);
-      });
-
-      if (enemy.x < -20) enemies.splice(i, 1);
+      if (e.x < -50) enemies.splice(i, 1);
     }
+
+    bullets.forEach((b, i) => {
+      b.x += b.speed;
+      if (b.x > canvas.width) bullets.splice(i, 1);
+    });
 
     for (let i = powerups.length - 1; i >= 0; i--) {
       const p = powerups[i];
       if (Math.hypot(p.x - char.x, p.y - char.y) < 25 + p.radius) {
-        char.hp += 10;
-        if (char.hp > 100) char.hp = 100;
+        char.hp = Math.min(100, char.hp + 10);
         powerups.splice(i, 1);
         sfx.play();
       }
@@ -205,6 +236,7 @@
     ctx.drawImage(images["background"], 0, 0, canvas.width, canvas.height);
 
     drawCharacter(selected, characters[selected]);
+    bullets.forEach(drawBullet);
     enemies.forEach(drawEnemy);
     powerups.forEach(drawPowerup);
     updateEffects();
@@ -214,7 +246,6 @@
       requestAnimationFrame(draw);
     }
   }
-
 </script>
 </body>
 </html>
