@@ -1,356 +1,217 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Boom Heroes</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HTML5 Game</title>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body, html { width: 100%; height: 100%; font-family: Arial, sans-serif; background: #222; overflow: hidden; }
-    canvas { display: block; background: none; margin: auto; position: absolute; top: 0; bottom: 0; left: 0; right: 0; border: 5px solid #fff; }
-    #ui { position: absolute; top: 10px; left: 10px; color: white; font-size: 18px; z-index: 10; }
-    #gameOver {
-      display: none;
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      color: red;
-      font-size: 36px;
-      background: rgba(0, 0, 0, 0.7);
-      padding: 20px;
-      border: 2px solid white;
-      text-align: center;
-      width: 400px;
-      font-family: 'Arial Black', sans-serif;
-      z-index: 20;
+    body {
+      margin: 0;
+      overflow: hidden;
+      background-color: #111;
+    }
+    canvas {
+      display: block;
+      margin: auto;
+      background: #222;
+      border: 2px solid #555;
     }
   </style>
 </head>
 <body>
-  <div id="ui">Boom Heroes - 1–4 für Helden, Pfeile bewegen, Leertaste = Spezial, F für Schießen</div>
-  <div id="gameOver"></div>
-  <canvas id="gameCanvas" width="800" height="600"></canvas>
-  <audio id="bgMusic" loop autoplay>
-    <source src="https://cdn.pixabay.com/download/audio/2022/10/19/audio_78335c9c96.mp3?filename=battle-theme-ambient-122949.mp3" type="audio/mpeg" />
-  </audio>
-<script>
-  const canvas = document.getElementById("gameCanvas");
-  const ctx = canvas.getContext("2d");
-  const gameOverScreen = document.getElementById("gameOver");
+  <canvas id="gameCanvas" width="900" height="600"></canvas>
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
 
-  const music = document.getElementById("bgMusic");
-  music.volume = 0.3;
+    const sfxShoot = new Audio("shoot.mp3");
+    const sfxHit = new Audio("hit.mp3");
 
-  const sfxShoot = new Audio("https://cdn.pixabay.com/download/audio/2022/03/22/audio_d98f38fd7a.mp3?filename=retro-game-powerup-21369.mp3");
-  const sfxHit = new Audio("https://cdn.pixabay.com/download/audio/2022/03/22/audio_f3b7dbaeb0.mp3?filename=retro-game-impact-24975.mp3");
+    const characters = {
+      "Max Blaze": { x: 200, y: 300, color: "red", alive: true },
+      "Torchbot": { x: 200, y: 350, color: "orange", alive: true },
+      "Volt Girl": { x: 200, y: 400, color: "yellow", alive: true },
+      "Boomimp": { x: 200, y: 450, color: "purple", alive: true }
+    };
 
-  // Charaktere
-  const characters = {
-    "Max Blaze": { x: 150, y: 300, color: "red", ability: "Punch", hp: 100, alive: true },
-    "Torchbot": { x: 150, y: 360, color: "orange", ability: "Flame", hp: 100, alive: true },
-    "Volt Girl": { x: 150, y: 420, color: "purple", ability: "Dash", hp: 100, alive: true },
-    "Boomimp": { x: 150, y: 480, color: "green", ability: "Boom", hp: 100, alive: true }
-  };
+    let selected = "Max Blaze";
+    let bullets = [];
+    let enemies = [];
+    let isGameOver = false;
 
-  let selected = "Max Blaze";
-  let specialActive = false;
-  let specialTimer = 0;
+    let shootDirection = { x: 1, y: 0 }; // Standardrichtung
+    const keysPressed = {};
 
-  // Raumschiffe links, 4 Stück, je 1000 hp, schützen die Charaktere
-  const spaceships = [
-    { x: 50, y: 280, width: 70, height: 70, hp: 1000 },
-    { x: 50, y: 340, width: 70, height: 70, hp: 1000 },
-    { x: 50, y: 400, width: 70, height: 70, hp: 1000 },
-    { x: 50, y: 460, width: 70, height: 70, hp: 1000 }
-  ];
+    document.addEventListener("keydown", e => {
+      keysPressed[e.key] = true;
+      if (isGameOver) return;
+      const char = characters[selected];
+      if (!char.alive) return;
 
-  const enemies = [];
-  const effects = [];
-  const powerups = [];
-  const bullets = [];
+      if (e.key === "ArrowRight") {
+        if (char.x + 10 < 700) char.x += 10;
+      }
+      if (e.key === "ArrowLeft") {
+        if (char.x - 10 > 150) char.x -= 10;
+      }
+      if (e.key === "ArrowUp") {
+        if (char.y - 10 > 50) char.y -= 10;
+      }
+      if (e.key === "ArrowDown") {
+        if (char.y + 10 < 550) char.y += 10;
+      }
 
-  let isGameOver = false;
+      if (e.key === "1") selected = "Max Blaze";
+      if (e.key === "2") selected = "Torchbot";
+      if (e.key === "3") selected = "Volt Girl";
+      if (e.key === "4") selected = "Boomimp";
 
-  // Gegner spawnen
-  function spawnEnemy() {
-    if (!isGameOver) {
+      if (e.key === " ") activateSpecial();
+      if (e.key.toLowerCase() === "f") shootBullet();
+
+      updateShootDirection();
+    });
+
+    document.addEventListener("keyup", e => {
+      keysPressed[e.key] = false;
+      updateShootDirection();
+    });
+
+    function updateShootDirection() {
+      let dx = 0;
+      let dy = 0;
+      if (keysPressed["ArrowRight"]) dx += 1;
+      if (keysPressed["ArrowLeft"]) dx -= 1;
+      if (keysPressed["ArrowUp"]) dy -= 1;
+      if (keysPressed["ArrowDown"]) dy += 1;
+
+      if (dx === 0 && dy === 0) {
+        shootDirection = { x: 1, y: 0 };
+      } else {
+        const length = Math.sqrt(dx * dx + dy * dy);
+        shootDirection = { x: dx / length, y: dy / length };
+      }
+    }
+
+    function shootBullet() {
+      const char = characters[selected];
+      if (!char.alive) return;
+
+      bullets.push({
+        x: char.x + shootDirection.x * 20,
+        y: char.y + shootDirection.y * 20,
+        radius: 5,
+        speedX: shootDirection.x * 7,
+        speedY: shootDirection.y * 7
+      });
+      sfxShoot.play();
+    }
+
+    function activateSpecial() {
+      // Spezialfähigkeit: noch nicht definiert
+    }
+
+    function spawnEnemy() {
       enemies.push({
-        x: 800,
+        x: 900,
         y: Math.random() * 550 + 25,
         radius: 20,
-        speed: 1 + Math.random() * 1,
-        hp: Math.floor(Math.random() * 3) + 1, // braucht 1-3 Schüsse
-        dying: false,
-        dyingFrame: 0
+        speed: 2,
+        hp: 3,
+        dying: false
       });
     }
-  }
 
-  function spawnPowerup() {
-    if (!isGameOver) {
-      powerups.push({ x: Math.random() * 700 + 50, y: Math.random() * 500 + 50, radius: 10 });
-    }
-  }
+    setInterval(spawnEnemy, 2000);
 
-  setInterval(spawnEnemy, 2500);
-  setInterval(spawnPowerup, 8000);
+    function gameLoop() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  document.addEventListener("keydown", e => {
-    if (isGameOver) return;
-    const char = characters[selected];
-    if (!char.alive) return;
-
-    if (e.key === "ArrowRight") {
-      if (char.x + 10 < 700) char.x += 10;
-    }
-    if (e.key === "ArrowLeft") {
-      if (char.x - 10 > 150) char.x -= 10; // nicht in Raumschiffe reinlaufen
-    }
-    if (e.key === "ArrowUp") {
-      if (char.y - 10 > 50) char.y -= 10;
-    }
-    if (e.key === "ArrowDown") {
-      if (char.y + 10 < 550) char.y += 10;
-    }
-    if (e.key === "1") selected = "Max Blaze";
-    if (e.key === "2") selected = "Torchbot";
-    if (e.key === "3") selected = "Volt Girl";
-    if (e.key === "4") selected = "Boomimp";
-    if (e.key === " ") activateSpecial();
-    if (e.key.toLowerCase() === "f") shootBullet();
-  });
-
-  // Bilder laden
-  const images = {
-    "Max Blaze": new Image(),
-    "Torchbot": new Image(),
-    "Volt Girl": new Image(),
-    "Boomimp": new Image(),
-    "enemy": new Image(),
-    "background": new Image(),
-    "spaceship": new Image()
-  };
-
-  images["background"].src = "IMG_4485.png";
-  images["Max Blaze"].src = "Max_blaze.png";
-  images["Torchbot"].src = "Torchbot.png";
-  images["Volt Girl"].src = "Volt_girl.png";
-  images["Boomimp"].src = "Boomimp.png";
-  images["enemy"].src = "meteor_enemy.png";
-  images["spaceship"].src = "spaceship.png";
-
-  function drawCharacter(name, char) {
-    if (!char.alive) return;
-    const img = images[name];
-    ctx.drawImage(img, char.x - 25, char.y - 25, 50, 50);
-    ctx.fillStyle = "white";
-    ctx.font = "16px Arial";
-    ctx.fillText(name, char.x - 25, char.y - 35);
-    ctx.fillText(`HP: ${char.hp}`, char.x - 25, char.y + 40);
-  }
-
-  function drawSpaceship(ship) {
-    if (ship.hp <= 0) return;
-    ctx.drawImage(images["spaceship"], ship.x - ship.width / 2, ship.y - ship.height / 2, ship.width, ship.height);
-    ctx.fillStyle = "white";
-    ctx.font = "14px Arial";
-    ctx.fillText(`HP: ${ship.hp}`, ship.x - 30, ship.y + 50);
-  }
-
-  function activateSpecial() {
-    const char = characters[selected];
-    if (!char.alive) return;
-    specialActive = true;
-    specialTimer = 20;
-    effects.push({ x: char.x, y: char.y, type: char.ability, time: 20 });
-    sfxShoot.play();
-  }
-
-  function shootBullet() {
-    const char = characters[selected];
-    if (!char.alive) return;
-    bullets.push({
-      x: char.x + 20,
-      y: char.y,
-      radius: 5,
-      speed: 7
-    });
-    sfxShoot.play();
-  }
-
-  function drawEnemy(enemy) {
-    if (enemy.dying) {
-      ctx.fillStyle = `rgba(255, ${Math.floor(255 - enemy.dyingFrame * 25)}, 0, 0.7)`;
-      ctx.beginPath();
-      ctx.arc(enemy.x, enemy.y, 20 + enemy.dyingFrame * 3, 0, Math.PI * 2);
-      ctx.fill();
-      enemy.dyingFrame++;
-      if (enemy.dyingFrame > 10) {
-        const index = enemies.indexOf(enemy);
-        if (index > -1) enemies.splice(index, 1);
+      // Zeichne Charaktere
+      for (let key in characters) {
+        const char = characters[key];
+        if (char.alive) {
+          ctx.fillStyle = char.color;
+          ctx.beginPath();
+          ctx.arc(char.x, char.y, 15, 0, Math.PI * 2);
+          ctx.fill();
+        }
       }
-      return;
-    }
-    ctx.drawImage(images["enemy"], enemy.x - 25, enemy.y - 25, 50, 50);
-  }
 
-  function drawPowerup(p) {
-    ctx.fillStyle = "gold";
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-    ctx.fill();
-  }
+      // Zeichne Bullets
+      bullets.forEach((bullet, bIndex) => {
+        bullet.x += bullet.speedX;
+        bullet.y += bullet.speedY;
 
-  function drawBullet(bullet) {
-    ctx.fillStyle = "cyan";
-    ctx.beginPath();
-    ctx.arc(bullet.x, bullet.y, bullet.radius, 0, Math.PI * 2);
-    ctx.fill();
-  }
+        ctx.fillStyle = "white";
+        ctx.beginPath();
+        ctx.arc(bullet.x, bullet.y, bullet.radius, 0, Math.PI * 2);
+        ctx.fill();
 
-  function updateEffects() {
-    for (let i = effects.length - 1; i >= 0; i--) {
-      const eff = effects[i];
-      eff.time--;
-      ctx.strokeStyle = "white";
-      ctx.beginPath();
-      if (eff.type === "Punch") {
-        ctx.arc(eff.x, eff.y, 50, 0, Math.PI * 2);
-      } else if (eff.type === "Flame") {
-        ctx.rect(eff.x, eff.y - 10, 60, 20);
-      } else if (eff.type === "Dash") {
-        ctx.moveTo(eff.x - 30, eff.y);
-        ctx.lineTo(eff.x + 30, eff.y);
-      } else if (eff.type === "Boom") {
-        ctx.arc(eff.x, eff.y, 70, 0, Math.PI * 2);
-      }
-      ctx.stroke();
+        if (
+          bullet.x < 0 ||
+          bullet.x > canvas.width ||
+          bullet.y < 0 ||
+          bullet.y > canvas.height
+        ) {
+          bullets.splice(bIndex, 1);
+          return;
+        }
 
-      if (eff.time <= 0) effects.splice(i, 1);
-    }
-  }
+        enemies.forEach(enemy => {
+          if (!enemy.dying) {
+            const dx = bullet.x - enemy.x;
+            const dy = bullet.y - enemy.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < bullet.radius + enemy.radius) {
+              enemy.hp--;
+              bullets.splice(bIndex, 1);
+              if (enemy.hp <= 0) {
+                enemy.dying = true;
+                sfxHit.play();
+              }
+            }
+          }
+        });
+      });
 
-  // Kollisionen prüfen und Spiel-Logik updaten
-  function update() {
-    // Spezial-Timer runterzählen
-    if (specialActive) {
-      specialTimer--;
-      if (specialTimer <= 0) specialActive = false;
-    }
+      // Zeichne Gegner
+      enemies.forEach((enemy, eIndex) => {
+        if (enemy.dying) {
+          enemies.splice(eIndex, 1);
+          return;
+        }
+        enemy.x -= enemy.speed;
+        ctx.fillStyle = "green";
+        ctx.beginPath();
+        ctx.arc(enemy.x, enemy.y, enemy.radius, 0, Math.PI * 2);
+        ctx.fill();
 
-    // Gegner bewegen
-    enemies.forEach(enemy => {
-      if (!enemy.dying) enemy.x -= enemy.speed;
-
-      // Wenn Gegner links an Raumschiffen ankommen -> Schaden an Raumschiff
-      spaceships.forEach(ship => {
-        if (ship.hp > 0 && !enemy.dying) {
-          const distX = Math.abs(enemy.x - ship.x);
-          const distY = Math.abs(enemy.y - ship.y);
-          if (distX < 40 && distY < 40) {
-            ship.hp -= 10;
-            enemy.dying = true;
-            sfxHit.play();
-            if (ship.hp <= 0) ship.hp = 0;
+        for (let key in characters) {
+          const char = characters[key];
+          if (char.alive) {
+            const dx = enemy.x - char.x;
+            const dy = enemy.y - char.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < enemy.radius + 15) {
+              char.alive = false;
+            }
           }
         }
       });
 
-      // Wenn Gegner zu weit links raus sind, Game Over
-      if (enemy.x < 0) {
+      // Game Over prüfen
+      if (!Object.values(characters).some(c => c.alive)) {
         isGameOver = true;
-      }
-    });
-
-    // Kugeln bewegen und checken ob sie Gegner treffen
-    for (let i = bullets.length - 1; i >= 0; i--) {
-      const bullet = bullets[i];
-      bullet.x += bullet.speed;
-
-      // Kugeln aus Bildschirm entfernen
-      if (bullet.x > canvas.width) {
-        bullets.splice(i, 1);
-        continue;
-      }
-
-      // Kollision mit Gegnern
-      for (let j = enemies.length - 1; j >= 0; j--) {
-        const enemy = enemies[j];
-        if (enemy.dying) continue;
-
-        const dx = bullet.x - enemy.x;
-        const dy = bullet.y - enemy.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist < bullet.radius + enemy.radius) {
-          enemy.hp--;
-          bullets.splice(i, 1);
-          sfxHit.play();
-          if (enemy.hp <= 0) {
-            enemy.dying = true;
-            enemy.dyingFrame = 0;
-          }
-          break;
-        }
+        ctx.fillStyle = "white";
+        ctx.font = "48px Arial";
+        ctx.fillText("GAME OVER", 320, 300);
+      } else {
+        requestAnimationFrame(gameLoop);
       }
     }
 
-    // Powerups einsammeln (optional – je nachdem, was sie bewirken sollen)
-    // Hier kann noch Logik hinzugefügt werden
-  }
-
-  function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    // Hintergrund zeichnen
-    if (images["background"].complete) {
-      ctx.drawImage(images["background"], 0, 0, canvas.width, canvas.height);
-    } else {
-      ctx.fillStyle = "#222";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-    }
-
-    // Raumschiffe zeichnen
-    spaceships.forEach(drawSpaceship);
-
-    // Charaktere zeichnen
-    for (const name in characters) {
-      drawCharacter(name, characters[name]);
-    }
-
-    // Gegner zeichnen
-    enemies.forEach(drawEnemy);
-
-    // Powerups zeichnen
-    powerups.forEach(drawPowerup);
-
-    // Effekte zeichnen
-    updateEffects();
-
-    // Kugeln zeichnen
-    bullets.forEach(drawBullet);
-
-    // Game Over anzeigen
-    if (isGameOver) {
-      gameOverScreen.style.display = "block";
-      gameOverScreen.textContent = "Game Over!";
-    } else {
-      gameOverScreen.style.display = "none";
-    }
-  }
-
-  function gameLoop() {
-    if (!isGameOver) {
-      update();
-      draw();
-      requestAnimationFrame(gameLoop);
-    } else {
-      draw(); // damit Game Over Screen sichtbar bleibt
-    }
-  }
-
-  // Start des Spiels
-  requestAnimationFrame(gameLoop);
-</script>
+    requestAnimationFrame(gameLoop);
+  </script>
 </body>
 </html>
