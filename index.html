@@ -150,9 +150,19 @@ setInterval(() => {
   spawnEnemy();
 }, 2000);
 
-setInterval(spawnMeteorites, 5000);
+let meteoriteSpawnInterval = setInterval(spawnMeteorites, 5000);
+let powerupSpawnInterval = setInterval(spawnPowerup, 8000);
 
-setInterval(spawnPowerup, 8000);
+function stopSpawning() {
+  clearInterval(meteoriteSpawnInterval);
+  clearInterval(powerupSpawnInterval);
+}
+
+function gameOver() {
+  isGameOver = true;
+  stopSpawning();
+  // Weitere Game Over Logik hier...
+}
 
 document.addEventListener("keydown", e => {
   const char = characters[selected];
