@@ -98,6 +98,11 @@ for (const key in images) {
     imagesLoaded++;
     if (imagesLoaded === totalImages) draw();
   };
+  images[key].onerror = () => {
+    console.error(`Bild ${key} konnte nicht geladen werden.`);
+    imagesLoaded++;
+    if (imagesLoaded === totalImages) draw();
+  };
 }
 
 function drawSpaceships() {
