@@ -24,255 +24,153 @@
   </style>
 </head>
 <body>
-<div id="ui">Boom Heroes - 1–4 für Helden, Pfeile bewegen, Z = Schuss, Leertaste = Spezial</div>
+<div id="ui">Boom Heroes - 1–4 für Helden, Pfeile bewegen, Leertaste = Spezial, W/A/S/D = Schießen</div>
 <div id="gameOver">GAME OVER - Seite neu laden zum Neustart</div>
 <canvas id="gameCanvas" width="800" height="600"></canvas>
-<audio id="bgMusic" loop autoplay>
-  <source src="https://cdn.pixabay.com/download/audio/2022/10/19/audio_78335c9c96.mp3?filename=battle-theme-ambient-122949.mp3" type="audio/mpeg">
-</audio>
 <script>
-  const canvas = document.getElementById("gameCanvas");
-  const ctx = canvas.getContext("2d");
-  const gameOverScreen = document.getElementById("gameOver");
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
 
-  const music = document.getElementById("bgMusic");
-  music.volume = 0.3;
+const characters = {
+  "Max Blaze": { x: 100, y: 300, color: "red", ability: "Punch", hp: 100 },
+  "Torchbot": { x: 100, y: 300, color: "orange", ability: "Flame", hp: 100 },
+  "Volt Girl": { x: 100, y: 300, color: "purple", ability: "Dash", hp: 100 },
+  "Boomimp": { x: 100, y: 300, color: "green", ability: "Boom", hp: 100 }
+};
 
-  const sfx = new Audio("https://cdn.pixabay.com/download/audio/2022/03/22/audio_d98f38fd7a.mp3?filename=retro-game-powerup-21369.mp3");
+let selected = "Max Blaze";
+let bullets = [];
+let enemies = [];
+let bosses = [];
+let phase = 1;
+let isGameOver = false;
 
-  const characters = {
-    "Max Blaze": { x: 150, y: 300, color: "red", ability: "Punch", hp: 100 },
-    "Torchbot": { x: 150, y: 300, color: "orange", ability: "Flame", hp: 100 },
-    "Volt Girl": { x: 150, y: 300, color: "purple", ability: "Dash", hp: 100 },
-    "Boomimp": { x: 150, y: 300, color: "green", ability: "Boom", hp: 100 }
-  };
+const shootCooldown = { up: 0, down: 0, left: 0, right: 0 };
 
-  let selected = "Max Blaze";
-  let specialActive = false;
-  let specialTimer = 0;
-  const enemies = [];
-  const effects = [];
-  const powerups = [];
-  const projectiles = [];
-  const explosions = [];
-
-  let isGameOver = false;
-
-  function spawnEnemy() {
-    if (!isGameOver) {
-      enemies.push({
-        x: 800,
-        y: Math.random() * 550 + 25,
-        radius: 20,
-        speed: 1.5,
-        hp: Math.floor(Math.random() * 3) + 2
-      });
-    }
+function spawnEnemiesForPhase() {
+  for (let i = 0; i < phase * 2; i++) {
+    enemies.push({ x: 800 + Math.random() * 400, y: Math.random() * 550 + 25, radius: 20, speed: 1 + phase * 0.2, hp: 3 + Math.floor(phase / 2) });
   }
+  bosses.push({ x: 800, y: 300, radius: 40, speed: 1 + phase * 0.3, hp: 20 + phase * 10 });
+}
 
-  function spawnPowerup() {
-    if (!isGameOver) {
-      powerups.push({ x: Math.random() * 700 + 50, y: Math.random() * 500 + 50, radius: 10 });
-    }
+function drawCharacter(name, char) {
+  ctx.fillStyle = char.color;
+  ctx.beginPath();
+  ctx.arc(char.x, char.y, 20, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "white";
+  ctx.fillText(name, char.x - 20, char.y - 30);
+  ctx.fillText("HP: " + char.hp, char.x - 20, char.y + 35);
+}
+
+function drawEnemy(e) {
+  ctx.fillStyle = "gray";
+  ctx.beginPath();
+  ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawBoss(b) {
+  ctx.fillStyle = "darkred";
+  ctx.beginPath();
+  ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "white";
+  ctx.fillText("Boss HP: " + b.hp, b.x - 30, b.y - b.radius - 10);
+}
+
+function drawBullet(b) {
+  ctx.fillStyle = "yellow";
+  ctx.beginPath();
+  ctx.arc(b.x, b.y, 5, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+document.addEventListener("keydown", e => {
+  if (isGameOver) return;
+  const char = characters[selected];
+  if (e.key === "ArrowRight") char.x += 10;
+  if (e.key === "ArrowLeft") char.x -= 10;
+  if (e.key === "ArrowUp") char.y -= 10;
+  if (e.key === "ArrowDown") char.y += 10;
+  if (e.key === "1") selected = "Max Blaze";
+  if (e.key === "2") selected = "Torchbot";
+  if (e.key === "3") selected = "Volt Girl";
+  if (e.key === "4") selected = "Boomimp";
+  if (e.key === "w" && shootCooldown.up <= 0) {
+    bullets.push({ x: char.x, y: char.y, dx: 0, dy: -5 });
+    shootCooldown.up = 10;
   }
+  if (e.key === "s" && shootCooldown.down <= 0) {
+    bullets.push({ x: char.x, y: char.y, dx: 0, dy: 5 });
+    shootCooldown.down = 10;
+  }
+  if (e.key === "a" && shootCooldown.left <= 0) {
+    bullets.push({ x: char.x, y: char.y, dx: -5, dy: 0 });
+    shootCooldown.left = 10;
+  }
+  if (e.key === "d" && shootCooldown.right <= 0) {
+    bullets.push({ x: char.x, y: char.y, dx: 5, dy: 0 });
+    shootCooldown.right = 10;
+  }
+});
 
-  setInterval(spawnEnemy, 2500);
-  setInterval(spawnPowerup, 8000);
+function update() {
+  const char = characters[selected];
+  Object.keys(shootCooldown).forEach(key => shootCooldown[key]--);
 
-  document.addEventListener("keydown", e => {
-    if (isGameOver) return;
-    const char = characters[selected];
-    if (e.key === "ArrowRight") char.x += 10;
-    if (e.key === "ArrowLeft") char.x -= 10;
-    if (e.key === "ArrowUp") char.y -= 10;
-    if (e.key === "ArrowDown") char.y += 10;
-    if (e.key === "1") selected = "Max Blaze";
-    if (e.key === "2") selected = "Torchbot";
-    if (e.key === "3") selected = "Volt Girl";
-    if (e.key === "4") selected = "Boomimp";
-    if (e.key === " ") activateSpecial();
-    if (e.key.toLowerCase() === "z") shoot();
+  bullets.forEach((b, i) => {
+    b.x += b.dx;
+    b.y += b.dy;
+    if (b.x < 0 || b.x > 800 || b.y < 0 || b.y > 600) bullets.splice(i, 1);
   });
 
-  const images = {
-    "Max Blaze": new Image(),
-    "Torchbot": new Image(),
-    "Volt Girl": new Image(),
-    "Boomimp": new Image(),
-    "enemy": new Image(),
-    "background": new Image()
-  };
-
-  images["background"].src = "IMG_4485.png";
-  images["Max Blaze"].src = "Max_blaze.png";
-  images["Torchbot"].src = "Torchbot.png";
-  images["Volt Girl"].src = "Volt_girl.png";
-  images["Boomimp"].src = "Boomimp.png";
-  images["enemy"].src = "meteor_enemy.png";
-
-  let imagesLoaded = 0;
-  const totalImages = Object.keys(images).length;
-  for (const key in images) {
-    images[key].onload = () => {
-      imagesLoaded++;
-      if (imagesLoaded === totalImages) {
-        draw();
+  enemies.forEach((e, i) => {
+    e.x -= e.speed;
+    bullets.forEach((b, j) => {
+      if (Math.hypot(b.x - e.x, b.y - e.y) < e.radius) {
+        e.hp--;
+        bullets.splice(j, 1);
+        if (e.hp <= 0) enemies.splice(i, 1);
       }
-    };
-  }
+    });
+  });
 
-  function drawCharacter(name, char) {
-    const img = images[name];
-    ctx.drawImage(img, char.x - 25, char.y - 25, 50, 50);
-    ctx.fillStyle = "white";
-    ctx.fillText(name, char.x - 25, char.y - 35);
-    ctx.fillText(`HP: ${char.hp}`, char.x - 25, char.y + 40);
-  }
-
-  function activateSpecial() {
-    const char = characters[selected];
-    specialActive = true;
-    specialTimer = 20;
-    effects.push({ x: char.x, y: char.y, type: char.ability, time: 20 });
-    sfx.play();
-  }
-
-  function shoot() {
-    const char = characters[selected];
-    projectiles.push({ x: char.x + 25, y: char.y, speed: 5, damage: 1 });
-  }
-
-  function updateProjectiles() {
-    for (let i = projectiles.length - 1; i >= 0; i--) {
-      const p = projectiles[i];
-      p.x += p.speed;
-
-      for (let j = enemies.length - 1; j >= 0; j--) {
-        const e = enemies[j];
-        if (Math.abs(p.x - e.x) < 20 && Math.abs(p.y - e.y) < 20) {
-          e.hp -= p.damage;
-          projectiles.splice(i, 1);
-          if (e.hp <= 0) {
-            explosions.push({ x: e.x, y: e.y, time: 20 });
-            enemies.splice(j, 1);
-          }
-          break;
-        }
+  bosses.forEach((b, i) => {
+    b.x -= b.speed;
+    bullets.forEach((bul, j) => {
+      if (Math.hypot(bul.x - b.x, bul.y - b.y) < b.radius) {
+        b.hp--;
+        bullets.splice(j, 1);
+        if (b.hp <= 0) bosses.splice(i, 1);
       }
-
-      if (p.x > canvas.width) projectiles.splice(i, 1);
-    }
-  }
-
-  function drawProjectiles() {
-    ctx.fillStyle = "cyan";
-    projectiles.forEach(p => {
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, 5, 0, Math.PI * 2);
-      ctx.fill();
     });
-  }
+  });
 
-  function drawExplosions() {
-    for (let i = explosions.length - 1; i >= 0; i--) {
-      const e = explosions[i];
-      ctx.fillStyle = `rgba(255,165,0,${e.time / 20})`;
-      ctx.beginPath();
-      ctx.arc(e.x, e.y, 30 - e.time, 0, Math.PI * 2);
-      ctx.fill();
-      e.time--;
-      if (e.time <= 0) explosions.splice(i, 1);
-    }
-  }
-
-  function drawEnemy(enemy) {
-    const img = images["enemy"];
-    ctx.drawImage(img, enemy.x - 25, enemy.y - 25, 50, 50);
-  }
-
-  function drawPowerup(p) {
-    ctx.fillStyle = "gold";
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  function updateEffects() {
-    effects.forEach((eff, i) => {
-      eff.time--;
-      ctx.strokeStyle = "white";
-      ctx.beginPath();
-      if (eff.type === "Punch") ctx.arc(eff.x, eff.y, 50, 0, Math.PI * 2);
-      else if (eff.type === "Flame") ctx.rect(eff.x, eff.y - 10, 100, 20);
-      else if (eff.type === "Dash") ctx.rect(eff.x - 20, eff.y - 40, 40, 80);
-      else if (eff.type === "Boom") ctx.arc(eff.x, eff.y, 80, 0, Math.PI * 2);
-      ctx.stroke();
-      if (eff.time <= 0) effects.splice(i, 1);
-    });
-  }
-
-  function update() {
-    const char = characters[selected];
-    if (char.hp <= 0) {
+  if (enemies.length === 0 && bosses.length === 0 && phase <= 10) {
+    phase++;
+    if (phase <= 10) {
+      spawnEnemiesForPhase();
+    } else {
       isGameOver = true;
-      gameOverScreen.style.display = "block";
-      return;
-    }
-
-    updateProjectiles();
-
-    for (let i = enemies.length - 1; i >= 0; i--) {
-      const enemy = enemies[i];
-      enemy.x -= enemy.speed;
-
-      const dx = enemy.x - char.x;
-      const dy = enemy.y - char.y;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist < 25 + enemy.radius) char.hp -= 1;
-
-      effects.forEach(eff => {
-        let hit = false;
-        if (eff.type === "Punch" && Math.hypot(eff.x - enemy.x, eff.y - enemy.y) < 50) hit = true;
-        if (eff.type === "Flame" && enemy.x > eff.x && enemy.x < eff.x + 100 && Math.abs(enemy.y - eff.y) < 20) hit = true;
-        if (eff.type === "Dash" && Math.abs(enemy.x - eff.x) < 20 && Math.abs(enemy.y - eff.y) < 40) hit = true;
-        if (eff.type === "Boom" && Math.hypot(eff.x - enemy.x, eff.y - enemy.y) < 80) hit = true;
-        if (hit) {
-          enemy.hp = 0;
-          explosions.push({ x: enemy.x, y: enemy.y, time: 20 });
-          enemies.splice(i, 1);
-        }
-      });
-
-      if (enemy.x < -20) enemies.splice(i, 1);
-    }
-
-    for (let i = powerups.length - 1; i >= 0; i--) {
-      const p = powerups[i];
-      if (Math.hypot(p.x - char.x, p.y - char.y) < 25 + p.radius) {
-        char.hp += 10;
-        if (char.hp > 100) char.hp = 100;
-        powerups.splice(i, 1);
-        sfx.play();
-      }
+      document.getElementById("gameOver").style.display = "block";
     }
   }
+}
 
-  function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(images["background"], 0, 0, canvas.width, canvas.height);
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  drawCharacter(selected, characters[selected]);
+  enemies.forEach(drawEnemy);
+  bosses.forEach(drawBoss);
+  bullets.forEach(drawBullet);
+  update();
+  if (!isGameOver) requestAnimationFrame(draw);
+}
 
-    drawCharacter(selected, characters[selected]);
-    enemies.forEach(drawEnemy);
-    powerups.forEach(drawPowerup);
-    updateEffects();
-    drawProjectiles();
-    drawExplosions();
-
-    if (!isGameOver) {
-      update();
-      requestAnimationFrame(draw);
-    }
-  }
+spawnEnemiesForPhase();
+draw();
 </script>
 </body>
 </html>
