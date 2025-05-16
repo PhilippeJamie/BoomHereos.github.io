@@ -51,6 +51,7 @@ let phase = 1;
 let boss = null;
 let bullets = [];
 const enemies = [];
+const meteors = [];
 const powerups = [];
 const effects = [];
 
@@ -58,6 +59,20 @@ function spawnEnemy() {
   if (isGameOver || boss) return;
   const hp = Math.floor(Math.random() * 3) + 1;
   enemies.push({ x: 800, y: Math.random() * 550 + 25, radius: 25, speed: 1 + phase * 0.2, hp });
+}
+
+function spawnMeteorites() {
+  if (isGameOver || boss) return;
+  const count = Math.min(3 + phase, 10); // Je Phase mehr Meteoriten, max 10
+  for (let i = 0; i < count; i++) {
+    meteors.push({
+      x: 800 + Math.random() * 400,
+      y: Math.random() * 550 + 25,
+      radius: 30,
+      speed: 0.5 + phase * 0.1,
+      hp: 3 + Math.floor(phase / 2),
+    });
+  }
 }
 
 function spawnPowerup() {
@@ -74,6 +89,8 @@ setInterval(() => {
   if (phase > 10 || isGameOver) return;
   spawnEnemy();
 }, 2000);
+
+setInterval(spawnMeteorites, 5000); // Meteoriten alle 5 Sekunden spawnen
 
 setInterval(spawnPowerup, 8000);
 
@@ -103,7 +120,7 @@ const images = {
   "Torchbot": new Image(),
   "Volt Girl": new Image(),
   "Boomimp": new Image(),
-  "enemy": new Image(),
+  "enemy": new Image(),       // Meteoriten + Gegner + Boss nutzen dieselbe Grafik
   "background": new Image()
 };
 
@@ -193,6 +210,22 @@ function update() {
     else if (e.x < -30) enemies.splice(i, 1);
   }
 
+  // Meteoriten bewegen
+  for (let i = meteors.length - 1; i >= 0; i--) {
+    const m = meteors[i];
+    m.x -= m.speed;
+
+    bullets.forEach((b, j) => {
+      if (Math.hypot(b.x - m.x, b.y - m.y) < m.radius) {
+        m.hp--;
+        bullets.splice(j, 1);
+      }
+    });
+
+    if (m.hp <= 0) meteors.splice(i, 1);
+    else if (m.x < -50) meteors.splice(i, 1);
+  }
+
   // Boss bewegen und treffen
   if (boss) {
     boss.x -= boss.speed;
@@ -232,6 +265,7 @@ function draw() {
   ctx.drawImage(images["background"], 0, 0, canvas.width, canvas.height);
   drawCharacter(selected, characters[selected]);
   enemies.forEach(drawEnemy);
+  meteors.forEach(drawEnemy); // Meteoriten zeichnen (gleiche Grafik wie Gegner)
   if (boss) drawBoss(boss);
   powerups.forEach(drawPowerup);
   updateEffects();
