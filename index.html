@@ -157,6 +157,15 @@ setInterval(() => {
 
 let meteoriteSpawnInterval = setInterval(spawnMeteorites, 5000);
 let powerupSpawnInterval = setInterval(spawnPowerup, 8000);
+let enemySpawnInterval = setInterval(() => {
+  if (isGameOver || phase > 10) {
+    clearInterval(enemySpawnInterval);
+    console.log("Spiel beendet - alle Phasen abgeschlossen!");
+    alert("Glückwunsch! Du hast alle Phasen geschafft!");
+    return;
+  }
+  spawnEnemy();
+}, 2000);
 
 function stopSpawning() {
   clearInterval(meteoriteSpawnInterval);
