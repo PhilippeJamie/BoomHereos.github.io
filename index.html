@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Boom Heroes</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -24,72 +24,63 @@
   </style>
 </head>
 <body>
-<div id="ui">Boom Heroes - 1–4 für Helden, Pfeile bewegen, Leertaste = Spezial, W/A/S/D = Schießen</div>
+<div id="ui">Boom Heroes - 1–4 für Helden, Pfeile bewegen, W/A/S/D = Schießen, Leertaste = Spezial</div>
 <div id="gameOver">GAME OVER - Seite neu laden zum Neustart</div>
 <canvas id="gameCanvas" width="800" height="600"></canvas>
+<audio id="bgMusic" loop autoplay>
+  <source src="https://cdn.pixabay.com/download/audio/2022/10/19/audio_78335c9c96.mp3?filename=battle-theme-ambient-122949.mp3" type="audio/mpeg">
+</audio>
 <script>
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
+const gameOverScreen = document.getElementById("gameOver");
+
+const music = document.getElementById("bgMusic");
+music.volume = 0.3;
 
 const characters = {
-  "Max Blaze": { x: 100, y: 300, color: "red", ability: "Punch", hp: 100 },
-  "Torchbot": { x: 100, y: 300, color: "orange", ability: "Flame", hp: 100 },
-  "Volt Girl": { x: 100, y: 300, color: "purple", ability: "Dash", hp: 100 },
-  "Boomimp": { x: 100, y: 300, color: "green", ability: "Boom", hp: 100 }
+  "Max Blaze": { x: 150, y: 300, color: "red", ability: "Punch", hp: 100 },
+  "Torchbot": { x: 150, y: 300, color: "orange", ability: "Flame", hp: 100 },
+  "Volt Girl": { x: 150, y: 300, color: "purple", ability: "Dash", hp: 100 },
+  "Boomimp": { x: 150, y: 300, color: "green", ability: "Boom", hp: 100 }
 };
 
 let selected = "Max Blaze";
-let bullets = [];
-let enemies = [];
-let bosses = [];
-let phase = 1;
 let isGameOver = false;
+let phase = 1;
+let boss = null;
+let bullets = [];
+const enemies = [];
+const powerups = [];
+const effects = [];
 
-const shootCooldown = { up: 0, down: 0, left: 0, right: 0 };
+function spawnEnemy() {
+  if (isGameOver || boss) return;
+  const hp = Math.floor(Math.random() * 3) + 1;
+  enemies.push({ x: 800, y: Math.random() * 550 + 25, radius: 25, speed: 1 + phase * 0.2, hp });
+}
 
-function spawnEnemiesForPhase() {
-  for (let i = 0; i < phase * 2; i++) {
-    enemies.push({ x: 800 + Math.random() * 400, y: Math.random() * 550 + 25, radius: 20, speed: 1 + phase * 0.2, hp: 3 + Math.floor(phase / 2) });
+function spawnPowerup() {
+  if (!isGameOver) {
+    powerups.push({ x: Math.random() * 700 + 50, y: Math.random() * 500 + 50, radius: 10 });
   }
-  bosses.push({ x: 800, y: 300, radius: 40, speed: 1 + phase * 0.3, hp: 20 + phase * 10 });
 }
 
-function drawCharacter(name, char) {
-  ctx.fillStyle = char.color;
-  ctx.beginPath();
-  ctx.arc(char.x, char.y, 20, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = "white";
-  ctx.fillText(name, char.x - 20, char.y - 30);
-  ctx.fillText("HP: " + char.hp, char.x - 20, char.y + 35);
+function spawnBoss() {
+  boss = { x: 800, y: 250, radius: 60, speed: 0.5 + phase * 0.2, hp: 20 + phase * 10 };
 }
 
-function drawEnemy(e) {
-  ctx.fillStyle = "gray";
-  ctx.beginPath();
-  ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2);
-  ctx.fill();
-}
+setInterval(() => {
+  if (phase > 10 || isGameOver) return;
+  spawnEnemy();
+}, 2000);
 
-function drawBoss(b) {
-  ctx.fillStyle = "darkred";
-  ctx.beginPath();
-  ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = "white";
-  ctx.fillText("Boss HP: " + b.hp, b.x - 30, b.y - b.radius - 10);
-}
-
-function drawBullet(b) {
-  ctx.fillStyle = "yellow";
-  ctx.beginPath();
-  ctx.arc(b.x, b.y, 5, 0, Math.PI * 2);
-  ctx.fill();
-}
+setInterval(spawnPowerup, 8000);
 
 document.addEventListener("keydown", e => {
-  if (isGameOver) return;
   const char = characters[selected];
+  if (isGameOver) return;
+
   if (e.key === "ArrowRight") char.x += 10;
   if (e.key === "ArrowLeft") char.x -= 10;
   if (e.key === "ArrowUp") char.y -= 10;
@@ -98,79 +89,161 @@ document.addEventListener("keydown", e => {
   if (e.key === "2") selected = "Torchbot";
   if (e.key === "3") selected = "Volt Girl";
   if (e.key === "4") selected = "Boomimp";
-  if (e.key === "w" && shootCooldown.up <= 0) {
-    bullets.push({ x: char.x, y: char.y, dx: 0, dy: -5 });
-    shootCooldown.up = 10;
-  }
-  if (e.key === "s" && shootCooldown.down <= 0) {
-    bullets.push({ x: char.x, y: char.y, dx: 0, dy: 5 });
-    shootCooldown.down = 10;
-  }
-  if (e.key === "a" && shootCooldown.left <= 0) {
-    bullets.push({ x: char.x, y: char.y, dx: -5, dy: 0 });
-    shootCooldown.left = 10;
-  }
-  if (e.key === "d" && shootCooldown.right <= 0) {
-    bullets.push({ x: char.x, y: char.y, dx: 5, dy: 0 });
-    shootCooldown.right = 10;
-  }
+  if (e.key === " ") activateSpecial();
+
+  // Schießen
+  if (e.key === "w") bullets.push({ x: char.x, y: char.y, dx: 0, dy: -5 });
+  if (e.key === "s") bullets.push({ x: char.x, y: char.y, dx: 0, dy: 5 });
+  if (e.key === "a") bullets.push({ x: char.x, y: char.y, dx: -5, dy: 0 });
+  if (e.key === "d") bullets.push({ x: char.x, y: char.y, dx: 5, dy: 0 });
 });
+
+const images = {
+  "Max Blaze": new Image(),
+  "Torchbot": new Image(),
+  "Volt Girl": new Image(),
+  "Boomimp": new Image(),
+  "enemy": new Image(),
+  "background": new Image()
+};
+
+images["background"].src = "IMG_4485.png";
+images["Max Blaze"].src = "Max_blaze.png";
+images["Torchbot"].src = "Torchbot.png";
+images["Volt Girl"].src = "Volt_girl.png";
+images["Boomimp"].src = "Boomimp.png";
+images["enemy"].src = "meteor_enemy.png";
+
+let imagesLoaded = 0;
+const totalImages = Object.keys(images).length;
+for (const key in images) {
+  images[key].onload = () => {
+    imagesLoaded++;
+    if (imagesLoaded === totalImages) draw();
+  };
+}
+
+function drawCharacter(name, char) {
+  const img = images[name];
+  ctx.drawImage(img, char.x - 25, char.y - 25, 50, 50);
+  ctx.fillStyle = "white";
+  ctx.fillText(name, char.x - 25, char.y - 35);
+  ctx.fillText(`HP: ${char.hp}`, char.x - 25, char.y + 40);
+}
+
+function drawEnemy(e) {
+  const img = images["enemy"];
+  ctx.drawImage(img, e.x - 25, e.y - 25, 50, 50);
+}
+
+function drawBoss(b) {
+  const img = images["enemy"];
+  ctx.drawImage(img, b.x - 60, b.y - 60, 120, 120);
+  ctx.fillStyle = "white";
+  ctx.fillText(`Boss HP: ${b.hp}`, b.x - 40, b.y - 70);
+}
+
+function drawPowerup(p) {
+  ctx.fillStyle = "gold";
+  ctx.beginPath();
+  ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function activateSpecial() {
+  const char = characters[selected];
+  effects.push({ x: char.x, y: char.y, type: char.ability, time: 20 });
+}
+
+function updateEffects() {
+  effects.forEach((eff, i) => {
+    eff.time--;
+    ctx.strokeStyle = "white";
+    ctx.beginPath();
+    if (eff.type === "Punch") ctx.arc(eff.x, eff.y, 50, 0, Math.PI * 2);
+    if (eff.type === "Flame") ctx.rect(eff.x, eff.y - 10, 100, 20);
+    if (eff.type === "Dash") ctx.rect(eff.x - 20, eff.y - 40, 40, 80);
+    if (eff.type === "Boom") ctx.arc(eff.x, eff.y, 80, 0, Math.PI * 2);
+    ctx.stroke();
+    if (eff.time <= 0) effects.splice(i, 1);
+  });
+}
 
 function update() {
   const char = characters[selected];
-  Object.keys(shootCooldown).forEach(key => shootCooldown[key]--);
+  if (char.hp <= 0 || phase > 10) {
+    isGameOver = true;
+    gameOverScreen.style.display = "block";
+    return;
+  }
 
-  bullets.forEach((b, i) => {
-    b.x += b.dx;
-    b.y += b.dy;
-    if (b.x < 0 || b.x > 800 || b.y < 0 || b.y > 600) bullets.splice(i, 1);
-  });
-
-  enemies.forEach((e, i) => {
+  // Gegner bewegen
+  for (let i = enemies.length - 1; i >= 0; i--) {
+    const e = enemies[i];
     e.x -= e.speed;
+
     bullets.forEach((b, j) => {
-      if (Math.hypot(b.x - e.x, b.y - e.y) < e.radius) {
+      if (Math.hypot(b.x - e.x, b.y - e.y) < 25) {
         e.hp--;
         bullets.splice(j, 1);
-        if (e.hp <= 0) enemies.splice(i, 1);
       }
     });
-  });
 
-  bosses.forEach((b, i) => {
-    b.x -= b.speed;
-    bullets.forEach((bul, j) => {
-      if (Math.hypot(bul.x - b.x, bul.y - b.y) < b.radius) {
-        b.hp--;
+    if (e.hp <= 0) enemies.splice(i, 1);
+    else if (e.x < -30) enemies.splice(i, 1);
+  }
+
+  // Boss bewegen und treffen
+  if (boss) {
+    boss.x -= boss.speed;
+    bullets.forEach((b, j) => {
+      if (Math.hypot(b.x - boss.x, b.y - boss.y) < 60) {
+        boss.hp--;
         bullets.splice(j, 1);
-        if (b.hp <= 0) bosses.splice(i, 1);
       }
     });
-  });
+    if (boss.hp <= 0) {
+      boss = null;
+      phase++;
+    }
+  } else if (enemies.length === 0) {
+    spawnBoss();
+  }
 
-  if (enemies.length === 0 && bosses.length === 0 && phase <= 10) {
-    phase++;
-    if (phase <= 10) {
-      spawnEnemiesForPhase();
-    } else {
-      isGameOver = true;
-      document.getElementById("gameOver").style.display = "block";
+  // Powerups
+  for (let i = powerups.length - 1; i >= 0; i--) {
+    const p = powerups[i];
+    if (Math.hypot(p.x - char.x, p.y - char.y) < 35) {
+      char.hp += 10;
+      if (char.hp > 100) char.hp = 100;
+      powerups.splice(i, 1);
     }
   }
+
+  // Kugeln bewegen
+  bullets.forEach(b => {
+    b.x += b.dx;
+    b.y += b.dy;
+  });
 }
 
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(images["background"], 0, 0, canvas.width, canvas.height);
   drawCharacter(selected, characters[selected]);
   enemies.forEach(drawEnemy);
-  bosses.forEach(drawBoss);
-  bullets.forEach(drawBullet);
-  update();
-  if (!isGameOver) requestAnimationFrame(draw);
-}
+  if (boss) drawBoss(boss);
+  powerups.forEach(drawPowerup);
+  updateEffects();
 
-spawnEnemiesForPhase();
-draw();
+  ctx.fillStyle = "cyan";
+  bullets.forEach(b => ctx.fillRect(b.x - 2, b.y - 2, 4, 4));
+
+  if (!isGameOver) {
+    update();
+    requestAnimationFrame(draw);
+  }
+}
 </script>
 </body>
 </html>
