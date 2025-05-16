@@ -274,11 +274,22 @@ function update() {
     }
   }
 
-  if (phase > 10) {
-    isGameOver = true;
-    gameOverScreen.style.display = "block";
+  let spawningActive = true;
+
+const enemySpawnInterval = setInterval(() => {
+  if (!spawningActive || isGameOver) {
+    clearInterval(enemySpawnInterval);
     return;
   }
+  if (phase > 10) {
+    spawningActive = false;
+    console.log("Spiel beendet - alle Phasen abgeschlossen!");
+    // Optional: hier Spielende einleiten, z.B. alert oder Startbildschirm zeigen
+    return;
+  }
+  spawnEnemy();
+}, 2000);
+
 
   // Gegner bewegen und Schaden durch Spezial
   for (let i = enemies.length - 1; i >= 0; i--) {
