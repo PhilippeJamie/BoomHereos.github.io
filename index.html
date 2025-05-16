@@ -406,8 +406,9 @@ updateDestructionEffects();
 
 ctx.fillStyle = "white";
 ctx.font = "24px Arial";
-ctx.fillText(Phase: ${phase}, 650, 40);
-ctx.fillText(Held: ${selected}, 650, 70);
+ctx.fillText(`Phase: ${phase}`, 650, 40);
+ctx.fillText(`Held: ${selected}`, 650, 70);
+
 
 if (!isGameOver) {
 update();
