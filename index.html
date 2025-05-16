@@ -26,12 +26,17 @@
 <body>
 <div id="ui">Boom Heroes - 1–4 für Helden, Pfeile bewegen, W/A/S/D = Schießen, Leertaste = Spezial</div>
 <div id="gameOver">GAME OVER - Seite neu laden zum Neustart</div>
-<canvas id="gameCanvas" width="800" height="600"></canvas>
+<audio id="bgMusic" loop>
+  <source src="https://cdn.pixabay.com/download/audio/2022/10/19/audio_78335c9c96.mp3?filename=battle-theme-ambient-122949.mp3" type="audio/mpeg">
+  Dein Browser unterstützt kein Audio.
+</audio>
+
+<script>
 document.addEventListener("keydown", () => {
   if (music.paused) music.play();
 }, { once: true });
-  <source src="https://cdn.pixabay.com/download/audio/2022/10/19/audio_78335c9c96.mp3?filename=battle-theme-ambient-122949.mp3" type="audio/mpeg">
-</audio>
+</script>
+
 <script>
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
