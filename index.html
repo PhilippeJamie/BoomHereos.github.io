@@ -292,13 +292,11 @@ meteors.forEach((m, i) => {
 m.x -= m.speed;
 if (m.x < 0) meteors.splice(i, 1);
 });
-
-// Boss bewegen
 if (boss) {
-boss.x -= boss.speed;
-if (boss.x < 100) boss.speed = -boss.speed;
-if (boss.x > 700) boss.speed = -boss.speed;
+  boss.x += boss.speed;
+  if (boss.x < 100 || boss.x > 700) boss.speed = -boss.speed;
 }
+
 
 // Kollisionsprüfung: Bullets vs Gegner + Meteore + Boss
 bullets.forEach((b, bi) => {
