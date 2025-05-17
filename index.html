@@ -243,7 +243,7 @@ function activateSpecial() {
 function drawDestructionEffects() {
 effects.forEach((eff, i) => {
 ctx.beginPath();
-ctx.strokeStyle = rgba(255, 165, 0, ${eff.time / 30});
+ctx.strokeStyle = `rgba(255, 165, 0, ${eff.time / 30})`;
 ctx.lineWidth = 3;
 ctx.arc(eff.x, eff.y, 30 - eff.time, 0, Math.PI * 2);
 ctx.stroke();
