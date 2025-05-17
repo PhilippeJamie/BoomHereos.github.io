@@ -98,17 +98,27 @@ images["spaceship"].src = "Raumschiff.png";
 
 let imagesLoaded = 0;
 const totalImages = Object.keys(images).length;
+
 for (const key in images) {
   images[key].onload = () => {
     imagesLoaded++;
-    if (imagesLoaded === totalImages) draw();
+    if (imagesLoaded === totalImages) {
+      console.log("Alle Bilder geladen.");
+      spawnBoss(); // Boss erst spawnen wenn alle Bilder da sind
+      draw();      // Erst dann mit Spiel starten
+    }
   };
   images[key].onerror = () => {
     console.error(`Bild ${key} konnte nicht geladen werden.`);
     imagesLoaded++;
-    if (imagesLoaded === totalImages) draw();
+    if (imagesLoaded === totalImages) {
+      console.log("Alle Bilder geladen (mit Fehlern).");
+      spawnBoss();
+      draw();
+    }
   };
 }
+
 
 function drawSpaceships() {
   spaceships.forEach(ship => {
