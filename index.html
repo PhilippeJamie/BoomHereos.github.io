@@ -393,7 +393,7 @@ function startGame() {
   }, 2000);
   meteoriteSpawnInterval = setInterval(spawnMeteorites, 5000);
   powerupSpawnInterval = setInterval(spawnPowerup, 8000);
-  draw();
+  requestAnimationFrame(draw);
 }
 
 document.getElementById("startButton").addEventListener("click", function () {
