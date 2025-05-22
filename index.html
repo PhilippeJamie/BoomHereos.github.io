@@ -332,6 +332,33 @@ document.getElementById("startButton").addEventListener("click", function () {
     alert("Bitte warten – Bilder werden noch geladen.");
   }
 });
+  // Mobile Button Events
+const moveMap = { up: [0, -10], down: [0, 10], left: [-10, 0], right: [10, 0] };
+document.querySelectorAll(".dirBtn").forEach(btn => {
+  btn.addEventListener("touchstart", e => {
+    e.preventDefault();
+    const dir = btn.dataset.dir;
+    const char = characters[selected];
+    if (!char || isGameOver) return;
+    const [dx, dy] = moveMap[dir];
+    const newX = char.x + dx;
+    const newY = char.y + dy;
+    if (newX >= 110 && newX <= 800) char.x = newX;
+    if (newY >= 0 && newY <= 600) char.y = newY;
+  });
+});
+
+document.getElementById("shootBtn").addEventListener("touchstart", e => {
+  e.preventDefault();
+  const char = characters[selected];
+  bullets.push({ x: char.x, y: char.y, dx: 5, dy: 0 }); // nach rechts
+});
+
+document.getElementById("specialBtn").addEventListener("touchstart", e => {
+  e.preventDefault();
+  activateSpecial();
+});
+
 </script>
 </body>
 </html>
