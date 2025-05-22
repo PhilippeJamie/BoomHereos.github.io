@@ -315,9 +315,19 @@ function update() {
 
   // Boss bewegen
   if (boss) {
-    boss.x += boss.speed;
-    if (boss.x < 100 || boss.x > 700) boss.speed = -boss.speed;
+  boss.x += boss.speed;
+  if (boss.x < 100) {
+    boss.x = 100;
+    boss.speed = -boss.speed;
+  } else if (boss.x > 700) {
+    boss.x = 700;
+    boss.speed = -boss.speed;
   }
+
+  // Kleine vertikale Bewegung (optional)
+  boss.y += Math.sin(Date.now() / 500) * 0.5;
+}
+
 
   // Kugeln treffen Ziele
   bullets.forEach((b, bi) => {
