@@ -23,7 +23,7 @@
     }
   </style>
 </head>
-<body>
+<body>  
 <div id="ui">Boom Heroes - 1–4 für Helden, Pfeile bewegen, W/A/S/D = Schießen, Leertaste = Spezial</div>
 <div id="gameOver">GAME OVER - Seite neu laden zum Neustart</div>
 <audio id="bgMusic" loop>
@@ -32,7 +32,16 @@
 </audio>
 
 <canvas id="gameCanvas" width="800" height="600"></canvas>
-
+  <button id="startButton" style="
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 24px;
+    padding: 12px 24px;
+    cursor: pointer;
+    z-index: 10;
+  ">Spiel starten</button>
 <script>
 document.addEventListener("keydown", () => {
   if (music.paused) music.play();
