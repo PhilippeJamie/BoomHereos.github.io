@@ -332,7 +332,9 @@ document.getElementById("startButton").addEventListener("click", function () {
     alert("Bitte warten – Bilder werden noch geladen.");
   }
 });
-  // Mobile Button Events
+
+</script>
+    // Mobile Button Events
 const moveMap = { up: [0, -10], down: [0, 10], left: [-10, 0], right: [10, 0] };
 document.querySelectorAll(".dirBtn").forEach(btn => {
   btn.addEventListener("touchstart", e => {
@@ -373,7 +375,5 @@ document.getElementById("specialBtn").addEventListener("touchstart", e => {
     <button id="specialBtn">💥</button>
   </div>
 </div>
-
-</script>
 </body>
 </html>
