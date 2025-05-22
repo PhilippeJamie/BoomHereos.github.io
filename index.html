@@ -358,6 +358,21 @@ document.getElementById("specialBtn").addEventListener("touchstart", e => {
   e.preventDefault();
   activateSpecial();
 });
+<!-- Mobile Steuerung -->
+<div id="mobileControls" style="position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); z-index: 10;">
+  <div style="display: flex; justify-content: center; gap: 10px; margin-bottom: 5px;">
+    <button class="dirBtn" data-dir="up">⬆️</button>
+  </div>
+  <div style="display: flex; justify-content: center; gap: 10px;">
+    <button class="dirBtn" data-dir="left">⬅️</button>
+    <button class="dirBtn" data-dir="down">⬇️</button>
+    <button class="dirBtn" data-dir="right">➡️</button>
+  </div>
+  <div style="display: flex; justify-content: center; gap: 10px; margin-top: 10px;">
+    <button id="shootBtn">🔫</button>
+    <button id="specialBtn">💥</button>
+  </div>
+</div>
 
 </script>
 </body>
