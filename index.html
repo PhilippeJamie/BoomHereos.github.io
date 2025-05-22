@@ -343,7 +343,8 @@ for (let j = spaceships.length - 1; j >= 0; j--) {
     char.hp -= damage;
     meteors.splice(i, 1);
     if (char.hp <= 0) gameOver();
-     }
+}
+  
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.drawImage(images["background"], 0, 0, canvas.width, canvas.height);
