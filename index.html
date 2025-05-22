@@ -136,14 +136,14 @@ function drawSpaceships() {
 function spawnEnemy() {
   if (isGameOver || boss) return;
   const hp = Math.floor(Math.random() * 3) + 1;
-  enemies.push({ x: 800, y: Math.random() * 550 + 25, radius: 25, speed: 0.7 + phase * 0.1,  , hp });
+  enemies.push({ x: 800, y: Math.random() * 550 + 25, radius: 25, speed: 0.7 + phase * 0.1, hp });
 }
 
 function spawnMeteorites() {
   if (isGameOver) return;
   const count = Math.min(5 + phase * 3, 30);
   for (let i = 0; i < count; i++) {
-    meteors.push({ x: 800 + Math.random() * 400, y: Math.random() * 550 + 25, radius: 15, speed: 0.7 + phase * 0.1,  , hp: 2 + Math.floor(phase / 2) });
+    meteors.push({ x: 800 + Math.random() * 400, y: Math.random() * 550 + 25, radius: 15, speed: 0.7 + phase * 0.1, hp: 2 + Math.floor(phase / 2) });
 
   }
 }
