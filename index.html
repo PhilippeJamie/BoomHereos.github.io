@@ -396,5 +396,11 @@ if (!isGameOver) requestAnimationFrame(draw);
 spawnBoss();
 draw();
 </script>
-
+<script>
+  document.getElementById("startButton").addEventListener("click", function () {
+      document.getElementById("startButton").style.display = "none";
+      startGame(); // <- Wichtig: Diese Funktion muss existieren
+  });
+</script>
+  
 </body> </html>
