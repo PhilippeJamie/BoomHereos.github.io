@@ -47,9 +47,11 @@
 document.addEventListener("keydown", () => {
   if (music.paused) music.play();
 }, { once: true });
-document.addEventListener("touchstart", () => {
-  if (music.paused) music.play();
-}, { once: true });
+const shootBtn = document.getElementById("shootBtn");
+if (shootBtn) {
+  shootBtn.addEventListener("touchstart", e => { ... });
+}
+
   
   function checkCollision(a, b) {
   const dx = a.x - b.x;
