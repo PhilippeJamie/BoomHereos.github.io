@@ -143,7 +143,8 @@ function spawnMeteorites() {
   if (isGameOver || boss) return;
   const count = Math.min(5 + phase * 3, 30);
   for (let i = 0; i < count; i++) {
-    meteors.push({ x: 800 + Math.random() * 400, y: Math.random() * 550 + 25, radius: 15, speed: 0.5 + phase * 0.1, hp: 2 + Math.floor(phase / 2) });
+    meteors.push({ x: 800 + Math.random() * 400, y: Math.random() * 550 + 25, radius: 15, speed: 2 + phase * 0.3, hp: 2 + Math.floor(phase / 2) });
+
   }
 }
 
