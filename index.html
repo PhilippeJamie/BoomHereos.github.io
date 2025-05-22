@@ -265,6 +265,15 @@ for (let i = meteors.length - 1; i >= 0; i--) {
   if (m.x < 0) {
     meteors.splice(i, 1);
     continue;
+    for (let j = spaceships.length - 1; j >= 0; j--) {
+    const ship = spaceships[j];
+    if (checkCollision(m, { x: ship.x, y: ship.y, radius: 30 })) {
+      const damage = m.radius > 20 ? 200 : 100;
+      ship.hp -= damage;
+      meteors.splice(i, 1);
+      if (ship.hp <= 0) gameOver();
+      break;
+    }
   }
 
   // Rest der Meteoriten-Kollision bleibt hier...
@@ -306,16 +315,7 @@ if (boss) {
     }
   });
 }
-for (let j = spaceships.length - 1; j >= 0; j--) {
-    const ship = spaceships[j];
-    if (checkCollision(m, { x: ship.x, y: ship.y, radius: 30 })) {
-      const damage = m.radius > 20 ? 200 : 100;
-      ship.hp -= damage;
-      meteors.splice(i, 1);
-      if (ship.hp <= 0) gameOver();
-      break;
-    }
-  }
+
 
   // Schaden an Gegnern (Aliens)
   for (let j = enemies.length - 1; j >= 0; j--) {
