@@ -267,10 +267,17 @@ for (let i = meteors.length - 1; i >= 0; i--) {
   if (m.x < 0) {
     meteors.splice(i, 1);
     continue;
-  if (boss) {
-    boss.x += boss.speed;
-    if (boss.x < 100 || boss.x > 700) boss.speed = -boss.speed;
   }
+
+  // Rest der Meteoriten-Kollision bleibt hier...
+}
+
+// BOSS-BEWEGUNG (außerhalb der Meteor-Schleife!)
+if (boss) {
+  boss.x += boss.speed;
+  if (boss.x < 100 || boss.x > 700) boss.speed = -boss.speed;
+}
+
   bullets.forEach((b, bi) => {
     enemies.forEach((e, ei) => {
       if (Math.hypot(b.x - e.x, b.y - e.y) < 25) {
