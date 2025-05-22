@@ -32,16 +32,17 @@
 </audio>
 
 <canvas id="gameCanvas" width="800" height="600"></canvas>
-  <button id="startButton" style="
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    font-size: 24px;
-    padding: 12px 24px;
-    cursor: pointer;
-    z-index: 10;
-  ">Spiel starten</button>
+<button id="startButton" style="
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 24px;
+  padding: 12px 24px;
+  cursor: pointer;
+  z-index: 10;
+">Spiel starten</button>
+
 <script>
 document.addEventListener("keydown", () => {
   if (music.paused) music.play();
@@ -50,24 +51,17 @@ document.addEventListener("keydown", () => {
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 const gameOverScreen = document.getElementById("gameOver");
-
 const music = document.getElementById("bgMusic");
 music.volume = 0.3;
 
-// Vier Raumschiffe links, jetzt voll Screen hoch verteilt, jeweils 1000 HP
 const shipCount = 4;
 const shipAreaHeight = canvas.height;
 const shipSpacing = shipAreaHeight / shipCount;
 const spaceships = [];
 for (let i = 0; i < shipCount; i++) {
-  spaceships.push({
-    x: 50,
-    y: shipSpacing * i + shipSpacing / 2,
-    hp: 1000
-  });
+  spaceships.push({ x: 50, y: shipSpacing * i + shipSpacing / 2, hp: 1000 });
 }
 
-// Charaktere, nur der ausgewählte wird gezeigt
 const characters = {
   "Max Blaze": { x: 200, y: 300, color: "red", ability: "Punch", hp: 100 },
   "Torchbot": { x: 200, y: 300, color: "orange", ability: "Flame", hp: 100 },
@@ -84,15 +78,13 @@ const enemies = [];
 const meteors = [];
 const powerups = [];
 const effects = [];
-const destructionEffects = []; // Für Zerstörungsanimationen
 
-// Bild-Objekte mit den angegebenen Dateinamen
 const images = {
   "Max Blaze": new Image(),
   "Torchbot": new Image(),
   "Volt Girl": new Image(),
   "Boomimp": new Image(),
-  "enemy": new Image(),       // Für Boss und kleine Meteoriten (gleiche Grafik)
+  "enemy": new Image(),
   "background": new Image(),
   "spaceship": new Image()
 };
@@ -102,7 +94,7 @@ images["Max Blaze"].src = "Max_blaze.png";
 images["Torchbot"].src = "Torchbot.png";
 images["Volt Girl"].src = "Volt_girl.png";
 images["Boomimp"].src = "Boomimp.png";
-images["enemy"].src = "meteor_enemy.png"; // Boss und kleine Meteore Grafik
+images["enemy"].src = "meteor_enemy.png";
 images["spaceship"].src = "Raumschiff.png";
 
 let imagesLoaded = 0;
@@ -112,9 +104,8 @@ for (const key in images) {
   images[key].onload = () => {
     imagesLoaded++;
     if (imagesLoaded === totalImages) {
-      console.log("Alle Bilder geladen.");
-      spawnBoss(); // Boss erst spawnen wenn alle Bilder da sind
-      draw();      // Erst dann mit Spiel starten
+      console.log("Alle Bilder geladen. Spiel bereit.");
+      // NICHTS starten – Start passiert beim Button-Klick!
     }
   };
   images[key].onerror = () => {
@@ -122,12 +113,9 @@ for (const key in images) {
     imagesLoaded++;
     if (imagesLoaded === totalImages) {
       console.log("Alle Bilder geladen (mit Fehlern).");
-      spawnBoss();
-      draw();
     }
   };
 }
-
 
 function drawSpaceships() {
   spaceships.forEach(ship => {
@@ -146,16 +134,9 @@ function spawnEnemy() {
 
 function spawnMeteorites() {
   if (isGameOver || boss) return;
-  const count = Math.min(5 + phase * 3, 30); // Viele kleine Meteoriten mit steigendem Wert
+  const count = Math.min(5 + phase * 3, 30);
   for (let i = 0; i < count; i++) {
-    meteors.push({
-      x: 800 + Math.random() * 400,
-      y: Math.random() * 550 + 25,
-      radius: 15, // kleiner als Gegner
-      speed: 0.5 + phase * 0.1,
-      hp: 2 + Math.floor(phase / 2),
-      destroyedAnimTime: 0
-    });
+    meteors.push({ x: 800 + Math.random() * 400, y: Math.random() * 550 + 25, radius: 15, speed: 0.5 + phase * 0.1, hp: 2 + Math.floor(phase / 2) });
   }
 }
 
@@ -169,18 +150,9 @@ function spawnBoss() {
   boss = { x: 800, y: 250, radius: 60, speed: 0.5 + phase * 0.2, hp: 20 + phase * 10 };
 }
 
-let enemySpawnInterval = setInterval(() => {
-  if (isGameOver || phase > 10) {
-    clearInterval(enemySpawnInterval);
-    console.log("Spiel beendet - alle Phasen abgeschlossen!");
-    alert("Glückwunsch! Du hast alle Phasen geschafft!");
-    return;
-  }
-  spawnEnemy();
-}, 2000);
-
-let meteoriteSpawnInterval = setInterval(spawnMeteorites, 5000);
-let powerupSpawnInterval = setInterval(spawnPowerup, 8000);
+let enemySpawnInterval;
+let meteoriteSpawnInterval;
+let powerupSpawnInterval;
 
 function stopSpawning() {
   clearInterval(meteoriteSpawnInterval);
@@ -197,21 +169,15 @@ function gameOver() {
 document.addEventListener("keydown", e => {
   const char = characters[selected];
   if (isGameOver) return;
-
-  // Bewegung der Charaktere, aber nicht in den Bereich der Raumschiffe (x < 110)
   if (e.key === "ArrowRight" && char.x + 10 < 800) char.x += 10;
-  if (e.key === "ArrowLeft" && char.x - 10 > 110) char.x -= 10; 
+  if (e.key === "ArrowLeft" && char.x - 10 > 110) char.x -= 10;
   if (e.key === "ArrowUp" && char.y - 10 > 0) char.y -= 10;
   if (e.key === "ArrowDown" && char.y + 10 < 600) char.y += 10;
-
-  // Charakterwechsel nur nach jeder Phase möglich (vereinfacht: immer möglich)
   if (e.key === "1") selected = "Max Blaze";
   if (e.key === "2") selected = "Torchbot";
   if (e.key === "3") selected = "Volt Girl";
   if (e.key === "4") selected = "Boomimp";
   if (e.key === " ") activateSpecial();
-
-  // Schießen
   if (e.key === "w") bullets.push({ x: char.x, y: char.y, dx: 0, dy: -5 });
   if (e.key === "s") bullets.push({ x: char.x, y: char.y, dx: 0, dy: 5 });
   if (e.key === "a") bullets.push({ x: char.x, y: char.y, dx: -5, dy: 0 });
@@ -219,7 +185,7 @@ document.addEventListener("keydown", e => {
 });
 
 function drawCharacter(name, char) {
-  if(name !== selected) return; // Nur ausgewählten Charakter zeichnen
+  if(name !== selected) return;
   const img = images[name];
   ctx.drawImage(img, char.x - 25, char.y - 25, 50, 50);
   ctx.fillStyle = "white";
@@ -229,18 +195,15 @@ function drawCharacter(name, char) {
 }
 
 function drawEnemy(e) {
-  const img = images["enemy"];
-  ctx.drawImage(img, e.x - 25, e.y - 25, 50, 50);
+  ctx.drawImage(images["enemy"], e.x - 25, e.y - 25, 50, 50);
 }
 
 function drawMeteor(m) {
-  const img = images["enemy"];
-  ctx.drawImage(img, m.x - m.radius, m.y - m.radius, m.radius * 2, m.radius * 2);
+  ctx.drawImage(images["enemy"], m.x - m.radius, m.y - m.radius, m.radius * 2, m.radius * 2);
 }
 
 function drawBoss(b) {
-  const img = images["enemy"];
-  ctx.drawImage(img, b.x - 60, b.y - 60, 120, 120);
+  ctx.drawImage(images["enemy"], b.x - 60, b.y - 60, 120, 120);
   ctx.fillStyle = "white";
   ctx.font = "20px Arial";
   ctx.fillText(`Boss HP: ${b.hp}`, b.x - 40, b.y - 70);
@@ -258,152 +221,117 @@ function activateSpecial() {
   effects.push({ x: char.x, y: char.y, type: char.ability, time: 30 });
 }
 
-// Zerstörungsanimation, einfach Kreise die wachsen und verblassen
 function drawDestructionEffects() {
-effects.forEach((eff, i) => {
-ctx.beginPath();
-ctx.strokeStyle = `rgba(255, 165, 0, ${eff.time / 30})`;
-ctx.lineWidth = 3;
-ctx.arc(eff.x, eff.y, 30 - eff.time, 0, Math.PI * 2);
-ctx.stroke();
-eff.time--;
-if (eff.time <= 0) effects.splice(i, 1);
-});
+  effects.forEach((eff, i) => {
+    ctx.beginPath();
+    ctx.strokeStyle = `rgba(255, 165, 0, ${eff.time / 30})`;
+    ctx.lineWidth = 3;
+    ctx.arc(eff.x, eff.y, 30 - eff.time, 0, Math.PI * 2);
+    ctx.stroke();
+    eff.time--;
+    if (eff.time <= 0) effects.splice(i, 1);
+  });
 }
 
 function update() {
-if (isGameOver) return;
-
-// Bullets bewegen
-bullets.forEach((b, i) => {
-b.x += b.dx;
-b.y += b.dy;
-if (b.x < 0 || b.x > 800 || b.y < 0 || b.y > 600) bullets.splice(i, 1);
-});
-
-// Gegner bewegen und Kollisionsprüfung
-enemies.forEach((e, i) => {
-e.x -= e.speed;
-if (e.x < 0) {
-// Gegner schaffen es zu den Raumschiffen
-spaceships.forEach(ship => {
-if (Math.abs(ship.y - e.y) < 40) {
-ship.hp -= 100;
-enemies.splice(i, 1);
-if (ship.hp <= 0) gameOver();
-}
-});
-}
-});
-
-// Meteoriten bewegen
-meteors.forEach((m, i) => {
-m.x -= m.speed;
-if (m.x < 0) meteors.splice(i, 1);
-});
-if (boss) {
-  boss.x += boss.speed;
-  if (boss.x < 100 || boss.x > 700) boss.speed = -boss.speed;
-}
-
-
-// Kollisionsprüfung: Bullets vs Gegner + Meteore + Boss
-bullets.forEach((b, bi) => {
-// Gegner
-enemies.forEach((e, ei) => {
-const dist = Math.hypot(b.x - e.x, b.y - e.y);
-if (dist < 25) {
-e.hp--;
-bullets.splice(bi, 1);
-if (e.hp <= 0) {
-enemies.splice(ei, 1);
-effects.push({ x: e.x, y: e.y, type: "explosion", time: 30 });
-}
-}
-});
-// Meteore
-meteors.forEach((m, mi) => {
-const dist = Math.hypot(b.x - m.x, b.y - m.y);
-if (dist < m.radius) {
-m.hp--;
-bullets.splice(bi, 1);
-if (m.hp <= 0) {
-meteors.splice(mi, 1);
-effects.push({ x: m.x, y: m.y, type: "explosion", time: 30 });
-}
-}
-});
-// Boss
-if (boss) {
-const dist = Math.hypot(b.x - boss.x, b.y - boss.y);
-if (dist < boss.radius) {
-boss.hp--;
-bullets.splice(bi, 1);
-if (boss.hp <= 0) {
-effects.push({ x: boss.x, y: boss.y, type: "explosion", time: 60 });
-boss = null;
-phase++;
-if (phase > 10) gameOver();
-else spawnBoss();
-}
-}
-}
-});
-
-// Powerup einsammeln
-powerups.forEach((p, pi) => {
-const char = characters[selected];
-const dist = Math.hypot(char.x - p.x, char.y - p.y);
-if (dist < 30) {
-powerups.splice(pi, 1);
-characters[selected].hp += 20;
-if (characters[selected].hp > 100) characters[selected].hp = 100;
-}
-});
+  if (isGameOver) return;
+  bullets.forEach((b, i) => {
+    b.x += b.dx;
+    b.y += b.dy;
+    if (b.x < 0 || b.x > 800 || b.y < 0 || b.y > 600) bullets.splice(i, 1);
+  });
+  enemies.forEach((e, i) => {
+    e.x -= e.speed;
+    if (e.x < 0) {
+      spaceships.forEach(ship => {
+        if (Math.abs(ship.y - e.y) < 40) {
+          ship.hp -= 100;
+          enemies.splice(i, 1);
+          if (ship.hp <= 0) gameOver();
+        }
+      });
+    }
+  });
+  meteors.forEach((m, i) => {
+    m.x -= m.speed;
+    if (m.x < 0) meteors.splice(i, 1);
+  });
+  if (boss) {
+    boss.x += boss.speed;
+    if (boss.x < 100 || boss.x > 700) boss.speed = -boss.speed;
+  }
+  bullets.forEach((b, bi) => {
+    enemies.forEach((e, ei) => {
+      if (Math.hypot(b.x - e.x, b.y - e.y) < 25) {
+        e.hp--; bullets.splice(bi, 1);
+        if (e.hp <= 0) { enemies.splice(ei, 1); effects.push({ x: e.x, y: e.y, type: "explosion", time: 30 }); }
+      }
+    });
+    meteors.forEach((m, mi) => {
+      if (Math.hypot(b.x - m.x, b.y - m.y) < m.radius) {
+        m.hp--; bullets.splice(bi, 1);
+        if (m.hp <= 0) { meteors.splice(mi, 1); effects.push({ x: m.x, y: m.y, type: "explosion", time: 30 }); }
+      }
+    });
+    if (boss && Math.hypot(b.x - boss.x, b.y - boss.y) < boss.radius) {
+      boss.hp--; bullets.splice(bi, 1);
+      if (boss.hp <= 0) {
+        effects.push({ x: boss.x, y: boss.y, type: "explosion", time: 60 });
+        boss = null; phase++;
+        if (phase > 10) gameOver(); else spawnBoss();
+      }
+    }
+  });
+  powerups.forEach((p, pi) => {
+    const char = characters[selected];
+    if (Math.hypot(char.x - p.x, char.y - p.y) < 30) {
+      powerups.splice(pi, 1);
+      char.hp = Math.min(char.hp + 20, 100);
+    }
+  });
 }
 
 function draw() {
-ctx.clearRect(0, 0, canvas.width, canvas.height);
-ctx.drawImage(images["background"], 0, 0, canvas.width, canvas.height);
-
-drawSpaceships();
-
-for (const name in characters) {
-drawCharacter(name, characters[name]);
-}
-
-enemies.forEach(drawEnemy);
-meteors.forEach(drawMeteor);
-
-if (boss) drawBoss(boss);
-
-bullets.forEach(b => {
-ctx.fillStyle = "yellow";
-ctx.beginPath();
-ctx.arc(b.x, b.y, 5, 0, Math.PI * 2);
-ctx.fill();
-});
-
-powerups.forEach(drawPowerup);
-
-drawDestructionEffects();
-
-update();
-
-if (!isGameOver) requestAnimationFrame(draw);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(images["background"], 0, 0, canvas.width, canvas.height);
+  drawSpaceships();
+  for (const name in characters) drawCharacter(name, characters[name]);
+  enemies.forEach(drawEnemy);
+  meteors.forEach(drawMeteor);
+  if (boss) drawBoss(boss);
+  bullets.forEach(b => {
+    ctx.fillStyle = "yellow";
+    ctx.beginPath(); ctx.arc(b.x, b.y, 5, 0, Math.PI * 2); ctx.fill();
+  });
+  powerups.forEach(drawPowerup);
+  drawDestructionEffects();
+  update();
+  if (!isGameOver) requestAnimationFrame(draw);
 }
 
 function startGame() {
   spawnBoss();
+  enemySpawnInterval = setInterval(() => {
+    if (isGameOver || phase > 10) {
+      clearInterval(enemySpawnInterval);
+      alert("Glückwunsch! Du hast alle Phasen geschafft!");
+      return;
+    }
+    spawnEnemy();
+  }, 2000);
+  meteoriteSpawnInterval = setInterval(spawnMeteorites, 5000);
+  powerupSpawnInterval = setInterval(spawnPowerup, 8000);
   draw();
 }
-  
+
+document.getElementById("startButton").addEventListener("click", function () {
+  if (imagesLoaded === totalImages) {
+    this.style.display = "none";
+    startGame();
+  } else {
+    alert("Bitte warten – Bilder werden noch geladen.");
+  }
+});
 </script>
-<script>
-  document.getElementById("startButton").addEventListener("click", function () {
-      document.getElementById("startButton").style.display = "none";
-      startGame(); // <- Wichtig: Diese Funktion muss existieren
-  });
-</script>
-  
-</body> </html>
+</body>
+</html>
