@@ -258,10 +258,12 @@ function update() {
       });
     }
   });
-  meteors.forEach((m, i) => {
-    m.x -= m.speed;
-    if (m.x < 0) meteors.splice(i, 1);
-  });
+for (let i = meteors.length - 1; i >= 0; i--) {
+  const m = meteors[i];
+  m.x -= m.speed;
+  if (m.x < 0) {
+    meteors.splice(i, 1);
+    continue;
   if (boss) {
     boss.x += boss.speed;
     if (boss.x < 100 || boss.x > 700) boss.speed = -boss.speed;
