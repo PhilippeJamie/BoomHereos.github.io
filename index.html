@@ -262,10 +262,14 @@ function update() {
 for (let i = meteors.length - 1; i >= 0; i--) {
   const m = meteors[i];
   m.x -= m.speed;
+
   if (m.x < 0) {
     meteors.splice(i, 1);
-    continue;
-    for (let j = spaceships.length - 1; j >= 0; j--) {
+    continue; // Frühzeitiger Abbruch, **aber vorher darf noch nichts Wichtiges kommen!**
+  }
+
+  // Schaden an Raumschiffen
+  for (let j = spaceships.length - 1; j >= 0; j--) {
     const ship = spaceships[j];
     if (checkCollision(m, { x: ship.x, y: ship.y, radius: 30 })) {
       const damage = m.radius > 20 ? 200 : 100;
@@ -275,6 +279,32 @@ for (let i = meteors.length - 1; i >= 0; i--) {
       break;
     }
   }
+
+  // Schaden an Gegnern
+  for (let j = enemies.length - 1; j >= 0; j--) {
+    const e = enemies[j];
+    if (checkCollision(m, e)) {
+      const damage = m.radius > 20 ? 2 : 1;
+      e.hp -= damage;
+      if (e.hp <= 0) {
+        enemies.splice(j, 1);
+        effects.push({ x: e.x, y: e.y, type: "explosion", time: 30 });
+      }
+      meteors.splice(i, 1);
+      break;
+    }
+  }
+
+  // Schaden am Spielercharakter
+  const char = characters[selected];
+  if (checkCollision(m, { x: char.x, y: char.y, radius: 25 })) {
+    const damage = m.radius > 20 ? 2 : 1;
+    char.hp -= damage;
+    meteors.splice(i, 1);
+    if (char.hp <= 0) gameOver();
+  }
+}
+
 
   // Rest der Meteoriten-Kollision bleibt hier...
 }
@@ -317,29 +347,6 @@ if (boss) {
 }
 
 
-  // Schaden an Gegnern (Aliens)
-  for (let j = enemies.length - 1; j >= 0; j--) {
-    const e = enemies[j];
-    if (checkCollision(m, e)) {
-      const damage = m.radius > 20 ? 2 : 1;
-      e.hp -= damage;
-      if (e.hp <= 0) {
-        enemies.splice(j, 1);
-        effects.push({ x: e.x, y: e.y, type: "explosion", time: 30 });
-      }
-      meteors.splice(i, 1);
-      break;
-    }
-  }
-
-  // Schaden am Spielercharakter
-  const char = characters[selected];
-  if (checkCollision(m, { x: char.x, y: char.y, radius: 25 })) {
-    const damage = m.radius > 20 ? 2 : 1;
-    char.hp -= damage;
-    meteors.splice(i, 1);
-    if (char.hp <= 0) gameOver();
-}
   
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
