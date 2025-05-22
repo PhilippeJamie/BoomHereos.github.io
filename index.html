@@ -313,20 +313,37 @@ function update() {
     }
   }
 
-  // Boss bewegen
-  if (boss) {
-  boss.x += boss.speed;
-  if (boss.x < 100) {
-    boss.x = 100;
-    boss.speed = -boss.speed;
-  } else if (boss.x > 700) {
-    boss.x = 700;
-    boss.speed = -boss.speed;
-  }
-
+// Boss bewegen und prüfen, ob er ein Raumschiff trifft
+if (boss) {
+  boss.x -= boss.speed; // Boss fliegt langsam nach links
   // Kleine vertikale Bewegung (optional)
   boss.y += Math.sin(Date.now() / 500) * 0.5;
 }
+
+  if (boss.x < 100) { // Ankunft beim Raumschiff-Bereich
+    // Treffer prüfen
+    for (const ship of spaceships) {
+      if (Math.abs(ship.y - boss.y) < 50) {
+        ship.hp -= 300; // Großer Schaden durch Boss
+        if (ship.hp <= 0) gameOver();
+        break;
+      }
+    }
+
+    // Explosionseffekt & Boss entfernen
+    effects.push({ x: boss.x, y: boss.y, type: "bossExplode", time: 40 });
+    boss = null;
+    phase++;
+    
+    if (phase > 10) {
+      gameOver();
+    } else {
+      setTimeout(spawnBoss, 10000); // Nächster Boss nach 10 Sekunden
+    }
+  }
+}
+
+
 
 
   // Kugeln treffen Ziele
