@@ -44,9 +44,6 @@
 ">Spiel starten</button>
 
 <script>
-document.addEventListener("keydown", () => {
-  if (music.paused) music.play();
-}, { once: true });
 
   
   function checkCollision(a, b) {
@@ -75,6 +72,10 @@ const characters = {
   "Volt Girl": { x: 200, y: 300, color: "purple", ability: "Dash", hp: 100 },
   "Boomimp": { x: 200, y: 300, color: "green", ability: "Boom", hp: 100 }
 };
+
+  document.addEventListener("keydown", () => {
+  if (music.paused) music.play();
+}, { once: true });
 
 let selected = "Max Blaze";
 let isGameOver = false;
