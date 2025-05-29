@@ -141,13 +141,12 @@ function spawnEnemy() {
 }
 
 function spawnMeteorites() {
-  if (isGameOver) return;
-  const count = Math.min(5 + phase * 3, 30);
-  for (let i = 0; i < count; i++) {
-    meteors.push({ x: 800 + Math.random() * 400, y: Math.random() * 550 + 25, radius: 15, speed: 0.7 + phase * 0.1, hp: 2 + Math.floor(phase / 2) });
-
-  }
-}
+    if (isGameOver) return;
+    const count = Math.min(5 + phase * 3, 30);
+    for (let i = 0; i < count; i++) {
+        meteors.push({ x: 800 + Math.random() * 400, y: Math.random() * 550 + 25, radius: 15, speed: 0.7 + phase * 0.1, hp: 2 + Math.floor(phase / 2) }); // HINZUGEFÜGT
+    }
+} 
 
 function spawnPowerup() {
   if (!isGameOver) {
@@ -157,8 +156,8 @@ function spawnPowerup() {
 
 
 function spawnBoss() {
-  boss = { x: 800, y: 250, radius: 60, speed: 0.7 + phase * 0.1, hp: 20 + phase * 10 };
-}
+    boss = { x: 800, y: 250, radius: 60, speed: 0.7 + phase * 0.1, hp: 20 + phase * 10 }; // HINZUGEFÜGT
+} 
 
 
 let enemySpawnInterval;
@@ -210,8 +209,11 @@ function drawEnemy(e) {
 }
 
 function drawMeteor(m) {
-  ctx.drawImage(images["enemy"], m.x - m.radius, m.y - m.radius, m.radius * 2, m.radius * 2);
-}
+    ctx.drawImage(images["enemy"], m.x - m.radius, m.y - m.radius, m.radius * 2, m.radius * 2);
+    ctx.fillStyle = "white"; // HINZUGEFÜGT
+    ctx.font = "12px Arial"; // HINZUGEFÜGT
+    ctx.fillText(m.hp, m.x - 10, m.y + 5); // HINZUGEFÜGT
+} 
 
 function drawBoss(b) {
   ctx.drawImage(images["enemy"], b.x - 60, b.y - 60, 120, 120);
@@ -244,151 +246,148 @@ function drawDestructionEffects() {
   });
 }
 function update() {
-  if (isGameOver) return;
+    if (isGameOver) return;
 
-  // Update Bullets
-  bullets.forEach((b, i) => {
-    b.x += b.dx;
-    b.y += b.dy;
-    if (b.x < 0 || b.x > 800 || b.y < 0 || b.y > 600) bullets.splice(i, 1);
-  });
-
-  // Enemies bewegen
-  enemies.forEach((e, i) => {
-    e.x -= e.speed;
-    if (e.x < 0) {
-      spaceships.forEach(ship => {
-        if (Math.abs(ship.y - e.y) < 40) {
-          ship.hp -= 100;
-          enemies.splice(i, 1);
-          if (ship.hp <= 0) gameOver();
-        }
-      });
-    }
-  });
-
-  // Meteore bewegen und Kollisionen prüfen
-  for (let i = meteors.length - 1; i >= 0; i--) {
-    const m = meteors[i];
-    m.x -= m.speed;
-
-    if (m.x < 0) {
-      meteors.splice(i, 1);
-      continue;
-    }
-
-    // Kollision mit Raumschiffen
-    for (let j = spaceships.length - 1; j >= 0; j--) {
-      const ship = spaceships[j];
-      if (checkCollision(m, { x: ship.x, y: ship.y, radius: 30 })) {
-        const damage = m.radius > 20 ? 200 : 100;
-        ship.hp -= damage;
-        meteors.splice(i, 1);
-        if (ship.hp <= 0) gameOver();
-        break;
-      }
-    }
-
-    // Kollision mit Gegnern
-    for (let j = enemies.length - 1; j >= 0; j--) {
-      const e = enemies[j];
-      if (checkCollision(m, e)) {
-        const damage = m.radius > 20 ? 2 : 1;
-        e.hp -= damage;
-        if (e.hp <= 0) {
-          enemies.splice(j, 1);
-          effects.push({ x: e.x, y: e.y, type: "explosion", time: 30 });
-        }
-        meteors.splice(i, 1);
-        break;
-      }
-    }
-
-    // Kollision mit Spieler
-    const char = characters[selected];
-    if (checkCollision(m, { x: char.x, y: char.y, radius: 25 })) {
-      const damage = m.radius > 20 ? 2 : 1;
-      char.hp -= damage;
-      meteors.splice(i, 1);
-      if (char.hp <= 0) gameOver();
-    }
-  }
-
-// Boss bewegen und prüfen, ob er ein Raumschiff trifft
-if (boss) {
-  boss.x -= boss.speed; // Boss fliegt langsam nach links
-  // Kleine vertikale Bewegung (optional)
-  boss.y += Math.sin(Date.now() / 500) * 0.5;
-}
-
-  if (boss.x < 100) { // Ankunft beim Raumschiff-Bereich
-    // Treffer prüfen
-    for (const ship of spaceships) {
-      if (Math.abs(ship.y - boss.y) < 50) {
-        ship.hp -= 300; // Großer Schaden durch Boss
-        if (ship.hp <= 0) gameOver();
-        break;
-      }
-    }
-
-    // Explosionseffekt & Boss entfernen
-    effects.push({ x: boss.x, y: boss.y, type: "bossExplode", time: 40 });
-    boss = null;
-    phase++;
-    
-    if (phase > 10) {
-      gameOver();
-    } else {
-      setTimeout(spawnBoss, 10000); // Nächster Boss nach 10 Sekunden
-    }
-  }
-}
-
-
-
-
-  // Kugeln treffen Ziele
-  bullets.forEach((b, bi) => {
-    enemies.forEach((e, ei) => {
-      if (Math.hypot(b.x - e.x, b.y - e.y) < 25) {
-        e.hp--; bullets.splice(bi, 1);
-        if (e.hp <= 0) {
-          enemies.splice(ei, 1);
-          effects.push({ x: e.x, y: e.y, type: "explosion", time: 30 });
-        }
-      }
+    // Update Bullets
+    bullets.forEach((b, i) => {
+        b.x += b.dx;
+        b.y += b.dy;
+        if (b.x < 0 || b.x > 800 || b.y < 0 || b.y > 600) bullets.splice(i, 1);
     });
 
-    meteors.forEach((m, mi) => {
-      if (Math.hypot(b.x - m.x, b.y - m.y) < m.radius) {
-        m.hp--; bullets.splice(bi, 1);
-        if (m.hp <= 0) {
-          meteors.splice(mi, 1);
-          effects.push({ x: m.x, y: m.y, type: "explosion", time: 30 });
+    // Enemies bewegen
+    enemies.forEach((e, i) => {
+        e.x -= e.speed;
+        if (e.x < 0) {
+            spaceships.forEach(ship => {
+                if (Math.abs(ship.y - e.y) < 40) {
+                    ship.hp -= 100;
+                    enemies.splice(i, 1);
+                    if (ship.hp <= 0) gameOver();
+                }
+            });
         }
-      }
     });
 
-    if (boss && Math.hypot(b.x - boss.x, b.y - boss.y) < boss.radius) {
-      boss.hp--; bullets.splice(bi, 1);
-      if (boss.hp <= 0) {
-        effects.push({ x: boss.x, y: boss.y, type: "explosion", time: 60 });
+    // Meteore bewegen und Kollisionen prüfen
+    for (let i = meteors.length - 1; i >= 0; i--) {
+        const m = meteors[i];
+        m.x -= m.speed;
+
+        if (m.x < 0) {
+            meteors.splice(i, 1);
+            continue;
+        }
+
+        // Kollision mit Raumschiffen
+        for (let j = spaceships.length - 1; j >= 0; j--) {
+            const ship = spaceships[j];
+            if (checkCollision(m, { x: ship.x, y: ship.y, radius: 30 })) {
+                const damage = m.radius > 20 ? 200 : 100;
+                ship.hp -= damage;
+                meteors.splice(i, 1);
+                if (ship.hp <= 0) gameOver();
+                break;
+            }
+        }
+
+        // Kollision mit Gegnern
+        for (let j = enemies.length - 1; j >= 0; j--) {
+            const e = enemies[j];
+            if (checkCollision(m, e)) {
+                const damage = m.radius > 20 ? 2 : 1;
+                e.hp -= damage;
+                if (e.hp <= 0) {
+                    enemies.splice(j, 1);
+                    effects.push({ x: e.x, y: e.y, type: "explosion", time: 30 });
+                }
+                meteors.splice(i, 1);
+                break;
+            }
+        }
+
+        // Kollision mit Spieler
+        const char = characters[selected];
+        if (checkCollision(m, { x: char.x, y: char.y, radius: 25 })) {
+            const damage = m.radius > 20 ? 2 : 1;
+            char.hp -= damage;
+            meteors.splice(i, 1);
+            if (char.hp <= 0) gameOver();
+        }
+    }
+
+    // Boss bewegen und prüfen, ob er ein Raumschiff trifft
+    if (boss) {
+        boss.x -= boss.speed; // Boss fliegt langsam nach links
+        // Kleine vertikale Bewegung (optional)
+        boss.y += Math.sin(Date.now() / 500) * 0.5;
+    }
+
+    if (boss && boss.x < 100) { // Ankunft beim Raumschiff-Bereich
+        // Treffer prüfen
+        for (const ship of spaceships) {
+            if (Math.abs(ship.y - boss.y) < 50) {
+                ship.hp -= 300; // Großer Schaden durch Boss
+                if (ship.hp <= 0) gameOver();
+                break;
+            }
+        }
+
+        // Explosionseffekt & Boss entfernen
+        effects.push({ x: boss.x, y: boss.y, type: "bossExplode", time: 40 });
         boss = null;
         phase++;
-        if (phase > 10) gameOver();
-        else spawnBoss();
-      }
-    }
-  });
 
-  // Powerups aufsammeln
-  powerups.forEach((p, pi) => {
-    const char = characters[selected];
-    if (Math.hypot(char.x - p.x, char.y - p.y) < 30) {
-      powerups.splice(pi, 1);
-      char.hp = Math.min(char.hp + 20, 100);
+        if (phase > 10) {
+            gameOver();
+        } else {
+            setTimeout(spawnBoss, 10000); // Nächster Boss nach 10 Sekunden
+        }
     }
-  });
+
+    // Kugeln treffen Ziele
+    bullets.forEach((b, bi) => {
+        enemies.forEach((e, ei) => {
+            if (Math.hypot(b.x - e.x, b.y - e.y) < 25) {
+                e.hp--; bullets.splice(bi, 1);
+                if (e.hp <= 0) {
+                    enemies.splice(ei, 1);
+                    effects.push({ x: e.x, y: e.y, type: "explosion", time: 30 });
+                }
+            }
+        });
+
+        meteors.forEach((m, mi) => {
+            if (Math.hypot(b.x - m.x, b.y - m.y) < m.radius) {
+                m.hp--; bullets.splice(bi, 1);
+                if (m.hp <= 0) {
+                    meteors.splice(mi, 1);
+                    effects.push({ x: m.x, y: m.y, type: "explosion", time: 30 });
+                }
+            }
+        });
+
+        if (boss && Math.hypot(b.x - boss.x, b.y - boss.y) < boss.radius) {
+            boss.hp--; bullets.splice(bi, 1);
+            if (boss.hp <= 0) {
+                effects.push({ x: boss.x, y: boss.y, type: "explosion", time: 60 });
+                boss = null;
+                phase++;
+                if (phase > 10) gameOver();
+                else setTimeout(spawnBoss, 5000); // Nächster Boss nach 5 Sekunden
+            }
+        }
+    });
+
+    // Powerups aufsammeln
+    powerups.forEach((p, pi) => {
+        const char = characters[selected];
+        if (Math.hypot(char.x - p.x, char.y - p.y) < 30) {
+            powerups.splice(pi, 1);
+            char.hp = Math.min(char.hp + 20, 100);
+        }
+    });
+}
 
 
 
