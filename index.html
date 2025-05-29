@@ -428,7 +428,9 @@ function startGame() {
 }
 
 document.getElementById("startButton").addEventListener("click", function () {
+  console.log("Button geklickt!");  // <-- DAS hier
   if (imagesLoaded === totalImages) {
+    console.log("Alle Bilder fertig, Spiel startet!");  // <-- UND DAS hier
     this.style.display = "none";
     startGame();
   } else {
