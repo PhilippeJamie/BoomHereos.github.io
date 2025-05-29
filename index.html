@@ -437,50 +437,6 @@ document.getElementById("startButton").addEventListener("click", function () {
 });
 
 </script>
-  <script>
-  // ✅ MOBILE BUTTON EVENTS
-  const moveMap = { up: [0, -10], down: [0, 10], left: [-10, 0], right: [10, 0] };
-  document.querySelectorAll(".dirBtn").forEach(btn => {
-    btn.addEventListener("touchstart", e => {
-      e.preventDefault();
-      const dir = btn.dataset.dir;
-      const char = characters[selected];
-      if (!char || isGameOver) return;
-      const [dx, dy] = moveMap[dir];
-      const newX = char.x + dx;
-      const newY = char.y + dy;
-      if (newX >= 110 && newX <= 800) char.x = newX;
-      if (newY >= 0 && newY <= 600) char.y = newY;
-    });
-  });
-
-  document.getElementById("shootBtn").addEventListener("touchstart", e => {
-    e.preventDefault();
-    const char = characters[selected];
-    bullets.push({ x: char.x, y: char.y, dx: 5, dy: 0 });
-  });
-
-  document.getElementById("specialBtn").addEventListener("touchstart", e => {
-    e.preventDefault();
-    activateSpecial();
-  });
-</script>
-
-<!-- ✅ MOBILE STEUERUNG IM BODY -->
-<div id="mobileControls" style="position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); z-index: 10;">
-  <div style="display: flex; justify-content: center; gap: 10px; margin-bottom: 5px;">
-    <button class="dirBtn" data-dir="up">⬆️</button>
-  </div>
-  <div style="display: flex; justify-content: center; gap: 10px;">
-    <button class="dirBtn" data-dir="left">⬅️</button>
-    <button class="dirBtn" data-dir="down">⬇️</button>
-    <button class="dirBtn" data-dir="right">➡️</button>
-  </div>
-  <div style="display: flex; justify-content: center; gap: 10px; margin-top: 10px;">
-    <button id="shootBtn">🔫</button>
-    <button id="specialBtn">💥</button>
-  </div>
-</div>
   
 </body>
 </html>
