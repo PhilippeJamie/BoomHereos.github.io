@@ -370,13 +370,18 @@ function update() {
         if (boss && Math.hypot(b.x - boss.x, b.y - boss.y) < boss.radius) {
             boss.hp--; bullets.splice(bi, 1);
             if (boss.hp <= 0) {
-                effects.push({ x: boss.x, y: boss.y, type: "explosion", time: 60 });
-                boss = null;
-                phase++;
-                if (phase > 10) gameOver();
-                else setTimeout(spawnBoss, 5000); // Nächster Boss nach 5 Sekunden
-            }
-        }
+    effects.push({ x: boss.x, y: boss.y, type: "explosion", time: 60 });
+    boss = null;
+    phase++;
+    if (phase > 10) {
+        alert("Glückwunsch! Du hast alle Phasen geschafft!");
+        isGameOver = true; // Setze isGameOver, um weitere Updates zu stoppen
+        stopSpawning();
+        gameOverScreen.style.display = "block"; // Zeige Game Over Bildschirm (optional)
+    } else {
+        setTimeout(spawnBoss, 5000);
+    }
+} 
     });
 
     // Powerups aufsammeln
