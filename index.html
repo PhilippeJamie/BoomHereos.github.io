@@ -323,27 +323,33 @@ function update() {
         boss.y += Math.sin(Date.now() / 500) * 0.5;
     }
 
-    if (boss && boss.x < 100) { // Ankunft beim Raumschiff-Bereich
-        // Treffer prüfen
-        for (const ship of spaceships) {
-            if (Math.abs(ship.y - boss.y) < 50) {
-                ship.hp -= 300; // Großer Schaden durch Boss
-                if (ship.hp <= 0) gameOver();
-                break;
+if (boss && boss.x < 100) { // Ankunft beim Raumschiff-Bereich
+    // Treffer prüfen
+    for (const ship of spaceships) {
+        if (Math.abs(ship.y - boss.y) < 50) {
+            ship.hp -= 300; // Großer Schaden durch Boss
+            if (ship.hp <= 0) {
+                // Hier könntest du spezifische Logik einfügen, wenn ein Raumschiff zerstört wird, z.B. ein visuelles Feedback.
+                // Das Spiel läuft aber weiter.
             }
-        }
-
-        // Explosionseffekt & Boss entfernen
-        effects.push({ x: boss.x, y: boss.y, type: "bossExplode", time: 40 });
-        boss = null;
-        phase++;
-
-        if (phase > 10) {
-            gameOver();
-        } else {
-            setTimeout(spawnBoss, 10000); // Nächster Boss nach 10 Sekunden
+            break;
         }
     }
+
+    // Explosionseffekt & Boss entfernen
+    effects.push({ x: boss.x, y: boss.y, type: "bossExplode", time: 40 });
+    boss = null;
+    phase++;
+
+    if (phase > 10) {
+        alert("Glückwunsch! Du hast alle Phasen geschafft!");
+        isGameOver = true;
+        stopSpawning();
+        gameOverScreen.style.display = "block";
+    } else {
+        setTimeout(spawnBoss, 10000); // Nächster Boss nach 10 Sekunden
+    }
+}
 
     // Kugeln treffen Ziele
     bullets.forEach((b, bi) => {
