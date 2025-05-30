@@ -388,8 +388,8 @@ if (boss && boss.x < 100) { // Ankunft beim Raumschiff-Bereich
         setTimeout(spawnBoss, 5000);
     }
 } 
-    };
-} 
+    });
+
   
     // Powerups aufsammeln
     powerups.forEach((p, pi) => {
@@ -397,13 +397,9 @@ if (boss && boss.x < 100) { // Ankunft beim Raumschiff-Bereich
         if (Math.hypot(char.x - p.x, char.y - p.y) < 30) {
             powerups.splice(pi, 1);
             char.hp = Math.min(char.hp + 20, 100);
-        }
-    }
-
-
-
-
-  
+       } 
+    });
+ 
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.drawImage(images["background"], 0, 0, canvas.width, canvas.height);
@@ -451,4 +447,4 @@ document.getElementById("startButton").addEventListener("click", function () {
 </script>
   
 </body>
-</html>
+</html> 
