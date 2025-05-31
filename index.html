@@ -242,9 +242,10 @@ function drawDestructionEffects() {
     ctx.arc(eff.x, eff.y, 30 - eff.time, 0, Math.PI * 2);
     ctx.stroke();
     eff.time--;
-    if (eff.time <= 0) effects.splice(i, 1);
-  });
+    if (eff.time <= 0) effects.splice(i, 1); 
 }
+  });
+
 function update() {
     if (isGameOver) return;
 
@@ -253,6 +254,7 @@ function update() {
         b.x += b.dx;
         b.y += b.dy;
         if (b.x < 0 || b.x > 800 || b.y < 0 || b.y > 600) bullets.splice(i, 1);
+        }
     });
 
     // Enemies bewegen
@@ -265,9 +267,10 @@ function update() {
                     enemies.splice(i, 1);
                     if (ship.hp <= 0) gameOver();
                 }
+              }
+              }
             });
-        }
-    });
+        
 
     // Meteore bewegen und Kollisionen prüfen
     for (let i = meteors.length - 1; i >= 0; i--) {
@@ -278,6 +281,7 @@ function update() {
             meteors.splice(i, 1);
             continue;
         }
+   }
 
         // Kollision mit Raumschiffen
         for (let j = spaceships.length - 1; j >= 0; j--) {
@@ -307,7 +311,7 @@ function update() {
         }
 
         // Kollision mit Spieler
-        const char = characters[selected];
+        const char = characters[selected];{
         if (checkCollision(m, { x: char.x, y: char.y, radius: 25 })) {
             const damage = m.radius > 20 ? 2 : 1;
             char.hp -= damage;
@@ -335,6 +339,7 @@ if (boss && boss.x < 100) { // Ankunft beim Raumschiff-Bereich
             break;
         }
     }
+ }
 
     // Explosionseffekt & Boss entfernen
     effects.push({ x: boss.x, y: boss.y, type: "bossExplode", time: 40 });
@@ -349,7 +354,7 @@ if (boss && boss.x < 100) { // Ankunft beim Raumschiff-Bereich
     } else {
         setTimeout(spawnBoss, 10000); // Nächster Boss nach 10 Sekunden
     }
-}
+
 
     // Kugeln treffen Ziele
     bullets.forEach((b, bi) => {
@@ -361,6 +366,7 @@ if (boss && boss.x < 100) { // Ankunft beim Raumschiff-Bereich
                     effects.push({ x: e.x, y: e.y, type: "explosion", time: 30 });
                 }
             }
+          }
         });
 
         meteors.forEach((m, mi) => {
