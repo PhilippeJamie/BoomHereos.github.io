@@ -287,6 +287,62 @@ function update() {
           enemies.splice(i, 1);
           if (ship.hp <= 0) gameOver();
         }
+        for (let bi = bullets.length - 1; bi >= 0; bi--) {
+  const b = bullets[bi];
+
+  // Gegner
+  for (let ei = enemies.length - 1; ei >= 0; ei--) {
+    const e = enemies[ei];
+    if (Math.hypot(b.x - e.x, b.y - e.y) < 25) {
+      e.hp--;
+      bullets.splice(bi, 1);
+      if (e.hp <= 0) {
+        enemies.splice(ei, 1);
+        effects.push({ x: e.x, y: e.y, type: "explosion", time: 30 });
+      }
+      break; // Damit die Kugel nur 1 Ziel trifft
+    }
+  }
+
+  // Meteoriten
+  for (let mi = meteors.length - 1; mi >= 0; mi--) {
+    const m = meteors[mi];
+    if (Math.hypot(b.x - m.x, b.y - m.y) < m.radius) {
+      m.hp--;
+      bullets.splice(bi, 1);
+      if (m.hp <= 0) {
+        meteors.splice(mi, 1);
+        effects.push({ x: m.x, y: m.y, type: "explosion", time: 30 });
+      }
+      break;
+    }
+  }
+
+  // Boss
+  if (boss && Math.hypot(b.x - boss.x, b.y - boss.y) < boss.radius) {
+    boss.hp--;
+    bullets.splice(bi, 1);
+    if (boss.hp <= 0) {
+      effects.push({ x: boss.x, y: boss.y, type: "explosion", time: 60 });
+      boss = null;
+      phase++;
+      if (phase > 10) gameOver();
+      else spawnBoss();
+    }
+    break;
+  }
+}
+
+
+  // Powerups aufsammeln
+  powerups.forEach((p, pi) => {
+    const char = characters[selected];
+    if (Math.hypot(char.x - p.x, char.y - p.y) < 30) {
+      powerups.splice(pi, 1);
+      char.hp = Math.min(char.hp + 20, 100);
+    }
+  });
+
       });
     }
   });
@@ -367,68 +423,6 @@ if (boss) {
     }
   }
 }
-
-
-
-
-for (let bi = bullets.length - 1; bi >= 0; bi--) {
-  const b = bullets[bi];
-
-  // Gegner
-  for (let ei = enemies.length - 1; ei >= 0; ei--) {
-    const e = enemies[ei];
-    if (Math.hypot(b.x - e.x, b.y - e.y) < 25) {
-      e.hp--;
-      bullets.splice(bi, 1);
-      if (e.hp <= 0) {
-        enemies.splice(ei, 1);
-        effects.push({ x: e.x, y: e.y, type: "explosion", time: 30 });
-      }
-      break; // Damit die Kugel nur 1 Ziel trifft
-    }
-  }
-
-  // Meteoriten
-  for (let mi = meteors.length - 1; mi >= 0; mi--) {
-    const m = meteors[mi];
-    if (Math.hypot(b.x - m.x, b.y - m.y) < m.radius) {
-      m.hp--;
-      bullets.splice(bi, 1);
-      if (m.hp <= 0) {
-        meteors.splice(mi, 1);
-        effects.push({ x: m.x, y: m.y, type: "explosion", time: 30 });
-      }
-      break;
-    }
-  }
-
-  // Boss
-  if (boss && Math.hypot(b.x - boss.x, b.y - boss.y) < boss.radius) {
-    boss.hp--;
-    bullets.splice(bi, 1);
-    if (boss.hp <= 0) {
-      effects.push({ x: boss.x, y: boss.y, type: "explosion", time: 60 });
-      boss = null;
-      phase++;
-      if (phase > 10) gameOver();
-      else spawnBoss();
-    }
-    break;
-  }
-}
-
-
-  // Powerups aufsammeln
-  powerups.forEach((p, pi) => {
-    const char = characters[selected];
-    if (Math.hypot(char.x - p.x, char.y - p.y) < 30) {
-      powerups.splice(pi, 1);
-      char.hp = Math.min(char.hp + 20, 100);
-    }
-  });
-
-
-
   
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
