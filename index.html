@@ -118,6 +118,11 @@
             if (imagesLoaded === totalImages) {
                 console.log("Alle Bilder geladen. Spiel bereit.");
                 allImagesLoaded = true;
+                // Starte das Spiel, sobald alle Bilder geladen sind
+                startButton.addEventListener("click", function() {
+                    startButton.style.display = "none";
+                    startGame();
+                });
             }
         };
         images[key].onerror = () => {
@@ -126,6 +131,11 @@
             if (imagesLoaded === totalImages) {
                 console.log("Alle Bilder geladen (mit Fehlern).");
                 allImagesLoaded = true;
+                // Starte das Spiel auch wenn es Fehler gab (vielleicht mit Platzhaltern)
+                startButton.addEventListener("click", function() {
+                    startButton.style.display = "none";
+                    startGame();
+                });
             }
         };
     }
@@ -332,7 +342,7 @@
                                     enemies.splice(ei, 1);
                                     effects.push({ x: e.x, y: e.y, type: "explosion", time: 30 });
                                 }
-                                break; // Damit die Kugel nur 1 Ziel trifft
+                                break; // Damit die Kugel nur 1
                             }
                         }
 
@@ -522,11 +532,7 @@
 
     requestAnimationFrame(gameLoop);
 }
-document.getElementById("startButton").addEventListener("click", function() {
-    document.getElementById("startButton").style.display = "none";
-    startGame();
-});
-
+// Der Event Listener für den Startknopf wurde bereits im Bild-onload-Handler hinzugefügt
 
 </script>
 
