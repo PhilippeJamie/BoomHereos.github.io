@@ -244,7 +244,7 @@ function drawDestructionEffects() {
     eff.time--;
     if (eff.time <= 0) effects.splice(i, 1); 
 }
-  });
+  )
 
 function update() {
     if (isGameOver) return;
@@ -255,7 +255,7 @@ function update() {
         b.y += b.dy;
         if (b.x < 0 || b.x > 800 || b.y < 0 || b.y > 600) bullets.splice(i, 1);
         }
-    });
+    )
 
     // Enemies bewegen
     enemies.forEach((e, i) => {
@@ -268,8 +268,8 @@ function update() {
                     if (ship.hp <= 0) gameOver();
                 }
               }
-              }
-            });
+              )
+            };
         
 
     // Meteore bewegen und Kollisionen prüfen
@@ -367,7 +367,7 @@ if (boss && boss.x < 100) { // Ankunft beim Raumschiff-Bereich
                 }
             }
           }
-        });
+        );
 
         meteors.forEach((m, mi) => {
             if (Math.hypot(b.x - m.x, b.y - m.y) < m.radius) {
