@@ -44,8 +44,6 @@
 ">Spiel starten</button>
 
 <script>
-
-
     function checkCollision(a, b) {
         const dx = a.x - b.x;
         const dy = a.y - b.y;
@@ -58,7 +56,6 @@
     const music = document.getElementById("bgMusic");
     music.volume = 0.3;
     const startButton = document.getElementById("startButton");
-
 
     const shipCount = 4;
     const shipAreaHeight = canvas.height;
@@ -88,8 +85,8 @@
     const meteors = [];
     const powerups = [];
     const effects = [];
-    let bossReachedTarget = false; // Neue Flag für Boss-Verhalten
-    let allImagesLoaded = false; // Flag für geladene Bilder
+    let bossReachedTarget = false;
+    let allImagesLoaded = false;
 
     const images = {
         "Max Blaze": new Image(),
@@ -118,11 +115,6 @@
             if (imagesLoaded === totalImages) {
                 console.log("Alle Bilder geladen. Spiel bereit.");
                 allImagesLoaded = true;
-                // Starte das Spiel, sobald alle Bilder geladen sind
-                startButton.addEventListener("click", function() {
-                    startButton.style.display = "none";
-                    startGame();
-                });
             }
         };
         images[key].onerror = () => {
@@ -131,14 +123,15 @@
             if (imagesLoaded === totalImages) {
                 console.log("Alle Bilder geladen (mit Fehlern).");
                 allImagesLoaded = true;
-                // Starte das Spiel auch wenn es Fehler gab (vielleicht mit Platzhaltern)
-                startButton.addEventListener("click", function() {
-                    startButton.style.display = "none";
-                    startGame();
-                });
             }
         };
     }
+
+    // Event-Listener für den Startknopf wird hier hinzugefügt, sobald das Skript geladen ist
+    startButton.addEventListener("click", function() {
+        startButton.style.display = "none";
+        startGame();
+    });
 
     function drawSpaceships() {
         spaceships.forEach(ship => {
@@ -160,7 +153,6 @@
         const count = Math.min(5 + phase * 3, 30);
         for (let i = 0; i < count; i++) {
             meteors.push({ x: 800 + Math.random() * 400, y: Math.random() * 550 + 25, radius: 15, speed: 0.7 + phase * 0.1, hp: 2 + Math.floor(phase / 2) });
-
         }
     }
 
@@ -170,11 +162,9 @@
         }
     }
 
-
     function spawnBoss() {
         boss = { x: 800, y: 250, radius: 60, speed: 0.7 + phase * 0.1, hp: 20 + phase * 10 };
     }
-
 
     let enemySpawnInterval;
     let meteoriteSpawnInterval;
@@ -246,7 +236,6 @@
         const char = characters[selected];
         effects.push({ x: char.x, y: char.y, type: char.ability, time: 30 });
 
-        // Gegner in der Nähe schädigen
         enemies.forEach((e, ei) => {
             if (Math.hypot(char.x - e.x, char.y - e.y) < 100) {
                 e.hp -= 5;
@@ -257,7 +246,6 @@
             }
         });
 
-        // Kollision mit Boss prüfen
         if (boss) {
             const distToBoss = Math.hypot(char.x - boss.x, char.y - boss.y);
             if (distToBoss < 100) {
@@ -270,33 +258,11 @@
             }
         }
 
-
         if (boss && boss.hp <= 0 && !boss.isDying) {
-            // Todesanimation starten
             boss.isDying = true;
             boss.deathTimer = 60;
         }
-
-
-        // Im Haupt-Update-Loop (Effekte beim Boss-Tod)
-        if (boss && boss.isDying) {
-            boss.deathTimer--;
-
-            if (boss.deathTimer % 10 === 0) {
-                effects.push({
-                    x: boss.x + (Math.random() * 40 - 20),
-                    y: boss.y + (Math.random() * 40 - 20),
-                    type: "smoke",
-                    time: 30
-                });
-            }
-
-            if (boss.deathTimer <= 0) {
-                boss = null; // Jetzt endgültig entfernen
-            }
-        }
     }
-
 
     function drawDestructionEffects() {
         effects.forEach((eff, i) => {
@@ -312,14 +278,12 @@
     function update() {
         if (isGameOver) return;
 
-        // Update Bullets
         bullets.forEach((b, i) => {
             b.x += b.dx;
             b.y += b.dy;
             if (b.x < 0 || b.x > 800 || b.y < 0 || b.y > 600) bullets.splice(i, 1);
         });
 
-        // Enemies bewegen
         enemies.forEach((e, i) => {
             e.x -= e.speed;
             if (e.x < 0) {
@@ -331,8 +295,6 @@
                     }
                     for (let bi = bullets.length - 1; bi >= 0; bi--) {
                         const b = bullets[bi];
-
-                        // Gegner
                         for (let ei = enemies.length - 1; ei >= 0; ei--) {
                             const e = enemies[ei];
                             if (Math.hypot(b.x - e.x, b.y - e.y) < 25) {
@@ -342,25 +304,20 @@
                                     enemies.splice(ei, 1);
                                     effects.push({ x: e.x, y: e.y, type: "explosion", time: 30 });
                                 }
-                                break; // Damit die Kugel nur 1
+                                break;
                             }
                         }
-
-                        // Meteoriten
                         for (let mi = meteors.length - 1; mi >= 0; mi--) {
                             const m = meteors[mi];
                             if (Math.hypot(b.x - m.x, b.y - m.y) < m.radius) {
                                 m.hp--;
                                 bullets.splice(bi, 1);
-                                if (m.hp <= 0) {
-                                    meteors.splice(mi, 1);
+                                if (meteors.splice(mi, 1);
                                     effects.push({ x: m.x, y: m.y, type: "explosion", time: 30 });
                                 }
                                 break;
                             }
                         }
-
-                        // Boss
                         if (boss && Math.hypot(b.x - boss.x, b.y - boss.y) < boss.radius) {
                             boss.hp--;
                             bullets.splice(bi, 1);
@@ -371,7 +328,7 @@
                                 boss = null;
                                 phase++;
                                 if (phase > 10) gameOver();
-                                else setTimeout(spawnBoss, 3000); // Spawne neuen Boss nach kurzer Zeit
+                                else setTimeout(spawnBoss, 3000);
                             }
                             break;
                         }
@@ -380,7 +337,6 @@
             }
         });
 
-        // Powerups aufsammeln
         powerups.forEach((p, pi) => {
             const char = characters[selected];
             if (Math.hypot(char.x - p.x, char.y - p.y) < 30) {
@@ -389,7 +345,6 @@
             }
         });
 
-        // Meteore bewegen und Kollisionen prüfen
         for (let i = meteors.length - 1; i >= 0; i--) {
             const m = meteors[i];
             m.x -= m.speed;
@@ -399,7 +354,6 @@
                 continue;
             }
 
-            // Kollision mit Raumschiffen
             for (let j = spaceships.length - 1; j >= 0; j--) {
                 const ship = spaceships[j];
                 if (checkCollision(m, { x: ship.x, y: ship.y, radius: 30 })) {
@@ -411,7 +365,6 @@
                 }
             }
 
-            // Kollision mit Gegnern
             for (let j = enemies.length - 1; j >= 0; j--) {
                 const e = enemies[j];
                 if (checkCollision(m, e)) {
@@ -426,7 +379,6 @@
                 }
             }
 
-            // Kollision mit Spieler
             const char = characters[selected];
             if (checkCollision(m, { x: char.x, y: char.y, radius: 25 })) {
                 const damage = m.radius > 20 ? 2 : 1;
@@ -436,21 +388,18 @@
             }
         }
 
-        // Boss bewegen und prüfen, ob er ein Raumschiff trifft
         if (boss) {
-            boss.x -= boss.speed; // Boss fliegt langsam nach links
-            boss.y += Math.sin(Date.now() / 500) * 0.5; // Kleine vertikale Bewegung
+            boss.x -= boss.speed;
+            boss.y += Math.sin(Date.now() / 500) * 0.5;
 
-            // Kollision mit Spieler
             const char = characters[selected];
             if (checkCollision({ x: boss.x, y: boss.y, radius: boss.radius }, { x: char.x, y: char.y, radius: 25 })) {
-                char.hp -= 10; // Beispielhafter Schaden bei Kollision
+                char.hp -= 10;
                 if (char.hp <= 0) gameOver();
-                // Optional: Füge hier einen visuellen Effekt für die Kollision hinzu
             }
 
             if (boss.x < 100 && !bossReachedTarget) {
-                bossReachedTarget = true; // Setze die Flag, um mehrfaches Ausführen zu verhindern
+                bossReachedTarget = true;
 
                 for (const ship of spaceships) {
                     if (Math.abs(ship.y - boss.y) < 50) {
@@ -469,12 +418,12 @@
                 } else {
                     setTimeout(() => {
                         spawnBoss();
-                        bossReachedTarget = false; // Setze die Flag zurück, nachdem der neue Boss gespawnt wurde
-                    }, 2000); // Beispielhafte Verzögerung
+                        bossReachedTarget = false;
+                    }, 2000);
                 }
             }
         } else {
-            bossReachedTarget = false; // Zurücksetzen, wenn kein Boss existiert
+            bossReachedTarget = false;
         }
     }
 
@@ -503,36 +452,31 @@
     }
 
     function startGame() {
-    if (!allImagesLoaded) {
-        console.log("Bilder noch nicht vollständig geladen.");
-        return;
+        if (!allImagesLoaded) {
+            console.log("Bilder noch nicht vollständig geladen.");
+            return;
+        }
+
+        isGameOver = false;
+        gameOverScreen.style.display = "none";
+        phase = 1;
+        boss = null;
+        bullets = [];
+        enemies = [];
+        meteors = [];
+        powerups = [];
+        effects = [];
+        bossReachedTarget = false;
+
+        // Starte die Intervalle
+        enemySpawnInterval = setInterval(spawnEnemy, 2000);
+        meteoriteSpawnInterval = setInterval(spawnMeteorites, 5000);
+        powerupSpawnInterval = setInterval(spawnPowerup, 8000);
+        setTimeout(spawnBoss, 5000); // Erster Boss nach kurzer Verzögerung
+
+        requestAnimationFrame(gameLoop);
     }
-
-    isGameOver = false;
-    gameOverScreen.style.display = "none";
-    phase = 1;
-    boss = null;
-    bullets = [];
-    enemies = [];
-    meteors = [];
-    powerups = [];
-    effects = [];
-    bossReachedTarget = false;
-
-    // Starte alle Spawn-Funktionen einmal initial
-    spawnMeteorites();
-    spawnEnemy();
-    spawnPowerup();
-    spawnBoss();
-
-    // Setze die Wiederholungs-Intervalle
-    enemySpawnInterval = setInterval(spawnEnemy, 2000);
-    meteoriteSpawnInterval = setInterval(spawnMeteorites, 5000);
-    powerupSpawnInterval = setInterval(spawnPowerup, 8000);
-
-    requestAnimationFrame(gameLoop);
-}
-// Der Event Listener für den Startknopf wurde bereits im Bild-onload-Handler hinzugefügt
+    // Der Event Listener für den Startknopf wurde außerhalb des Bild-onload-Handlers platziert
 
 </script>
 
