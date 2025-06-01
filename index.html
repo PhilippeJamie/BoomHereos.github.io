@@ -244,10 +244,17 @@ function activateSpecial() {
 
 // Kollision mit Boss prüfen
 if (boss) {
-  const distToBoss = Math.hypot(b.x - boss.x, b.y - boss.y);
-  if (distToBoss < 40) {
-    boss.hp--;
-    bullets.splice(bi, 1);
+  const distToBoss = Math.hypot(char.x - boss.x, char.y - boss.y); // nutze char, nicht b!
+  if (distToBoss < 100) { // gleiche Reichweite wie bei den Feinden
+    boss.hp -= 5;
+    if (boss.hp <= 0 && !boss.isDying) {
+      boss.isDying = true;
+      boss.deathTimer = 60;
+      effects.push({ x: boss.x, y: boss.y, type: "explosion", time: 60 });
+    }
+  }
+}
+
 
     if (boss.hp <= 0 && !boss.isDying) {
       // Todesanimation starten
