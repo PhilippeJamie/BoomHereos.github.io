@@ -228,9 +228,33 @@ function drawPowerup(p) {
 }
 
 function activateSpecial() {
-  const char = characters[selected];
-  effects.push({ x: char.x, y: char.y, type: char.ability, time: 30 });
+  const char = characters[selected];
+  effects.push({ x: char.x, y: char.y, type: char.ability, time: 30 });
+
+  // Gegner in der Nähe schädigen
+  enemies.forEach((e, ei) => {
+    if (Math.hypot(char.x - e.x, char.y - e.y) < 100) {
+      e.hp -= 5;
+      if (e.hp <= 0) {
+        enemies.splice(ei, 1);
+        effects.push({ x: e.x, y: e.y, type: "explosion", time: 30 });
+      }
+    }
+  });
+
+  // Boss schädigen
+  if (boss && Math.hypot(char.x - boss.x, char.y - boss.y) < 150) {
+    boss.hp -= 10;
+    if (boss.hp <= 0) {
+      effects.push({ x: boss.x, y: boss.y, type: "explosion", time: 60 });
+      boss = null;
+      phase++;
+      if (phase > 10) gameOver();
+      else spawnBoss();
+    }
+  }
 }
+
 
 function drawDestructionEffects() {
   effects.forEach((eff, i) => {
