@@ -488,6 +488,11 @@ function startGame() {
   powerupSpawnInterval = setInterval(spawnPowerup, 8000);
   requestAnimationFrame(draw);
 }
+function gameLoop() {
+  update();
+  draw();
+  requestAnimationFrame(gameLoop);
+}
 
 document.getElementById("startButton").addEventListener("click", function () {
   console.log("Button geklickt!");  // <-- DAS hier
