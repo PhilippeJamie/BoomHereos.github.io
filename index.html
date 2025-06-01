@@ -403,7 +403,8 @@ if (boss && Math.hypot(b.x - boss.x, b.y - boss.y) < boss.radius) {
             powerups.splice(pi, 1);
             char.hp = Math.min(char.hp + 20, 100);
        } 
-    });
+          });
+} 
  
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
