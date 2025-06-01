@@ -259,16 +259,9 @@ if (boss) {
     if (boss.hp <= 0 && !boss.isDying) {
       // Todesanimation starten
       boss.isDying = true;
-      boss.deathTimer = 60; // z.B. 60 Frames (1 Sekunde)
-
-      // Explosionseffekt starten
-      effects.push({
-        x: boss.x,
-        y: boss.y,
-        type: "explosion",
-        time: 60
+      boss.deathTimer = 60; // z.B. 60 Frames (1 Sekunden) 
       });
-    }
+    
 
     break; // Keine weitere Prüfung für diese Kugel nötig
   }
