@@ -491,41 +491,39 @@
     }
 
     function startGame() {
-        isGameOver = false;
-        gameOverScreen.style.display = "none";
-        phase = 1;
-        boss = null;
-        bullets = [];
-        enemies = [];
-        meteors = [];
-        powerups = [];
-        effects = [];
-        bossReachedTarget = false;
-
-        // Starte alle Spawn-Funktionen einmal initial
-        spawnMeteorites();
-        spawnEnemy();
-        spawnPowerup();
-        spawnBoss();
-
-        // Setze die Wiederholungs-Intervalle
-        meteoriteSpawnInterval = setInterval(spawnMeteorites, 5000);
-        enemySpawnInterval = setInterval(spawnEnemy, 2000);
-        powerupSpawnInterval = setInterval(spawnPowerup, 8000);
-
-        requestAnimationFrame(gameLoop);
+    if (!allImagesLoaded) {
+        console.log("Bilder noch nicht vollständig geladen.");
+        return;
     }
 
-    // Starte das Spiel, wenn der Start-Button geklickt wird
-    document.getElementById("startButton").addEventListener("click", function() {
-        if (allImagesLoaded) {
-            document.getElementById("startButton").style.display = "none";
-            startGame();
-        } else {
-            console.log("Warte auf das Laden der Bilder...");
-            // Optional: Zeige dem Benutzer eine Ladeanzeige
-        }
-    });
+    isGameOver = false;
+    gameOverScreen.style.display = "none";
+    phase = 1;
+    boss = null;
+    bullets = [];
+    enemies = [];
+    meteors = [];
+    powerups = [];
+    effects = [];
+    bossReachedTarget = false;
+
+    // Starte alle Spawn-Funktionen einmal initial
+    spawnMeteorites();
+    spawnEnemy();
+    spawnPowerup();
+    spawnBoss();
+
+    // Setze die Wiederholungs-Intervalle
+    enemySpawnInterval = setInterval(spawnEnemy, 2000);
+    meteoriteSpawnInterval = setInterval(spawnMeteorites, 5000);
+    powerupSpawnInterval = setInterval(spawnPowerup, 8000);
+
+    requestAnimationFrame(gameLoop);
+}
+document.getElementById("startButton").addEventListener("click", function() {
+    document.getElementById("startButton").style.display = "none";
+    startGame();
+});
 
 
 </script>
