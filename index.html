@@ -242,16 +242,51 @@ function activateSpecial() {
     }
   });
 
-  // Boss schädigen
-  if (boss && Math.hypot(char.x - boss.x, char.y - boss.y) < 150) {
-    boss.hp -= 10;
-    if (boss.hp <= 0) {
-      effects.push({ x: boss.x, y: boss.y, type: "explosion", time: 60 });
-      boss = null;
-      phase++;
-      if (phase > 10) gameOver();
-      else spawnBoss();
+// Kollision mit Boss prüfen
+if (boss) {
+  const distToBoss = Math.hypot(b.x - boss.x, b.y - boss.y);
+  if (distToBoss < 40) {
+    boss.hp--;
+    bullets.splice(bi, 1);
+
+    if (boss.hp <= 0 && !boss.isDying) {
+      // Todesanimation starten
+      boss.isDying = true;
+      boss.deathTimer = 60; // z.B. 60 Frames (1 Sekunde)
+
+      // Explosionseffekt starten
+      effects.push({
+        x: boss.x,
+        y: boss.y,
+        type: "explosion",
+        time: 60
+      });
     }
+
+    break; // Keine weitere Prüfung für diese Kugel nötig
+  }
+}
+
+// Im Haupt-Update-Loop
+if (boss) {
+  if (boss.isDying) {
+    boss.deathTimer--;
+
+    // Optional: Mehr Effekte, z.B. Rauch, Funken
+    if (boss.deathTimer % 10 === 0) {
+      effects.push({
+        x: boss.x + (Math.random() * 40 - 20),
+        y: boss.y + (Math.random() * 40 - 20),
+        type: "smoke",
+        time: 30
+      });
+    }
+
+    if (boss.deathTimer <= 0) {
+      boss = null; // Jetzt endgültig entfernen
+    }
+  } else {
+    // Hier normaler Boss-Code (z.B. Bewegung, Schießen)
   }
 }
 
