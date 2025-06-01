@@ -494,16 +494,32 @@ function gameLoop() {
   requestAnimationFrame(gameLoop);
 }
 
-document.getElementById("startButton").addEventListener("click", function () {
-  console.log("Button geklickt!");  // <-- DAS hier
-  if (imagesLoaded === totalImages) {
-    console.log("Alle Bilder fertig, Spiel startet!");  // <-- UND DAS hier
-    this.style.display = "none";
-    startGame();
-  } else {
-    alert("Bitte warten – Bilder werden noch geladen.");
-  }
+// Warte, bis alle Bilder geladen sind (das hast du schon)
+if (imagesLoaded === totalImages) {
+  console.log("Alle Bilder geladen. Spiel bereit.");
+  // Das Spiel startet erst, wenn der Button geklickt wird!
+}
+
+// Starte das Spiel, wenn der Start-Button geklickt wird
+document.getElementById("startButton").addEventListener("click", function() {
+  // Blende den Start-Button aus
+  document.getElementById("startButton").style.display = "none";
+
+  // Starte alle Spawn-Funktionen einmal initial
+  spawnMeteorites();
+  spawnEnemy();
+  spawnPowerup();
+  spawnBoss();
+
+  // Setze die Wiederholungs-Intervalle
+  meteoriteSpawnInterval = setInterval(spawnMeteorites, 8000);
+  enemySpawnInterval = setInterval(spawnEnemy, 3000);
+  powerupSpawnInterval = setInterval(spawnPowerup, 15000);
+
+  // Starte den Hauptspiel-Loop
+  requestAnimationFrame(gameLoop);
 });
+
 
 </script>
   
