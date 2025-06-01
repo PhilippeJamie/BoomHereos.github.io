@@ -115,6 +115,10 @@
             if (imagesLoaded === totalImages) {
                 console.log("Alle Bilder geladen. Spiel bereit.");
                 allImagesLoaded = true;
+                startButton.addEventListener("click", function() {
+                    startButton.style.display = "none";
+                    startGame();
+                });
             }
         };
         images[key].onerror = () => {
@@ -123,15 +127,13 @@
             if (imagesLoaded === totalImages) {
                 console.log("Alle Bilder geladen (mit Fehlern).");
                 allImagesLoaded = true;
+                startButton.addEventListener("click", function() {
+                    startButton.style.display = "none";
+                    startGame();
+                });
             }
         };
     }
-
-    // Event-Listener für den Startknopf wird hier hinzugefügt, sobald das Skript geladen ist
-    startButton.addEventListener("click", function() {
-        startButton.style.display = "none";
-        startGame();
-    });
 
     function drawSpaceships() {
         spaceships.forEach(ship => {
@@ -327,8 +329,7 @@
                                 boss.deathTimer = 60;
                                 boss = null;
                                 phase++;
-                                if (phase > 10) gameOver();
-                                else setTimeout(spawnBoss, 3000);
+                                if (phase > 1else setTimeout(spawnBoss, 3000);
                             }
                             break;
                         }
