@@ -311,12 +311,22 @@
                     break; // Nächste Bullet
                 }
             }
+        }
 
-            for (let mi = meteors.length - 1; mi >= 0; mi--) {
-                const m = meteors[mi];
-                if (checkCollision(b, m)) { // Hier war ein Fehler: b war nicht definiert in diesem Scope
+        for (let mi = meteors.length - 1; mi >= 0; mi--) {
+            const m = meteors[mi];
+            m.x -= m.speed;
+
+            if (m.x < 0) {
+                meteors.splice(mi, 1);
+                continue;
+            }
+
+            for (let bi = bullets.length - 1; bi >= 0; bi--) {
+                const b = bullets[bi];
+                if (checkCollision(b, m)) {
                     m.hp--;
-                    bullets.splice(bi, 1); // bi ist hier noch aktuell
+                    bullets.splice(bi, 1);
                     if (m.hp <= 0) {
                         meteors.splice(mi, 1);
                         effects.push({ x: m.x, y: m.y, type: "explosion", time: 30 });
@@ -325,51 +335,13 @@
                 }
             }
 
-            if (boss && Math.hypot(b.x - boss.x, b.y - boss.y) < boss.radius) { // b ist hier noch aktuell
-                boss.hp--;
-                bullets.splice(bi, 1); // bi ist hier noch aktuell
-                if (boss.hp <= 0 && !boss.isDying) {
-                    effects.push({ x: boss.x, y: boss.y, type: "explosion", time: 60 });
-                    boss.isDying = true;
-                    boss.deathTimer = 60;
-                    boss = null;
-                    phase++;
-                    if (phase >gameOver();
-                    } else {
-                        setTimeout(() => {
-                            spawnBoss();
-                            bossReachedTarget = false;
-                        }, 2000);
-                    }
-                }
-                break; // Nächste Bullet
-            }
-        }
-
-        powerups.forEach((p, pi) => {
-            const char = characters[selected];
-            if (Math.hypot(char.x - p.x, char.y - p.y) < 30) {
-                powerups.splice(pi, 1);
-                char.hp = Math.min(char.hp + 20, 100);
-            }
-        });
-
-        for (let i = meteors.length - 1; i >= 0; i--) {
-            const m = meteors[i];
-            m.x -= m.speed;
-
-            if (m.x < 0) {
-                meteors.splice(i, 1);
-                continue;
-            }
-
             for (let j = spaceships.length - 1; j >= 0; j--) {
                 const ship = spaceships[j];
                 if (checkCollision(m, { x: ship.x, y: ship.y, radius: 30 })) {
                     const damage = m.radius > 20 ? 200 : 100;
                     ship.hp -= damage;
-                    meteors.splice(i, 1);
-                    if (ship.hp <= 0) gameOver();
+                    meteors.splice(mi, 1);
+                    if (ship.hp<= 0) gameOver();
                     break;
                 }
             }
@@ -383,7 +355,7 @@
                         enemies.splice(j, 1);
                         effects.push({ x: e.x, y: e.y, type: "explosion", time: 30 });
                     }
-                    meteors.splice(i, 1);
+                    meteors.splice(mi, 1);
                     break;
                 }
             }
@@ -392,7 +364,7 @@
             if (checkCollision(m, { x: char.x, y: char.y, radius: 25 })) {
                 const damage = m.radius > 20 ? 2 : 1;
                 char.hp -= damage;
-                meteors.splice(i, 1);
+                meteors.splice(mi, 1);
                 if (char.hp <= 0) gameOver();
             }
         }
@@ -407,7 +379,32 @@
                 if (char.hp <= 0) gameOver();
             }
 
-            if (boss.x < 100 && !bossReachedTarget) {
+            for (let bi = bullets.length - 1; bi >= 0; bi--) {
+                const b = bullets[bi];
+                if (Math.hypot(b.x - boss.x, b.y - boss.y) < boss.radius) {
+                    boss.hp--;
+                    bullets.splice(bi, 1);
+                    if (boss.hp <= 0 && !boss.isDying) {
+                        effects.push({ x: boss.x, y: boss.y, type: "explosion", time: 60 });
+                        boss.isDying = true;
+                        boss.deathTimer = 60;
+                        boss = null;
+                        phase++;
+
+                        if (phase > 10) {
+                            gameOver();
+                        } else {
+                            setTimeout(() => {
+                                spawnBoss();
+                                bossReachedTarget = false;
+                            }, 2000);
+                        }
+                    }
+                    break; // Nächste Bullet
+                }
+            }
+
+            if (boss && boss.x < 100 && !bossReachedTarget) {
                 bossReachedTarget = true;
 
                 for (const ship of spaceships) {
@@ -434,6 +431,14 @@
         } else {
             bossReachedTarget = false;
         }
+
+        powerups.forEach((p, pi) => {
+            const char = characters[selected];
+            if (Math.hypot(char.x - p.x, char.y - p.y) < 30) {
+                powerups.splice(pi, 1);
+                char.hp = Math.min(char.hp + 20, 100);
+            }
+        });
     }
 
     function draw() {
