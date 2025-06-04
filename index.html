@@ -157,13 +157,19 @@
     }
 
     function spawnEnemy() {
-        if (isGameOver || boss) return; // Nicht spawnen, wenn Boss da ist
+        // Spawne Gegner nur, wenn das Spiel läuft und KEIN Boss auf dem Bildschirm ist.
+        // Das ist wichtig, um die Phase sauber zu halten.
+        if (isGameOver || boss) return;
         const hp = Math.floor(Math.random() * 3) + 1;
         enemies.push({ x: 800, y: Math.random() * 550 + 25, radius: 25, speed: 0.7 + phase * 0.1, hp });
     }
 
     function spawnMeteorites() {
         if (isGameOver) return;
+        // Spawne Meteoriten auch, wenn ein Boss da ist, aber nur in normalen Phasen.
+        // Wenn ein Boss da ist, sollten die Meteoriten eine andere Rolle spielen,
+        // oder weniger spawnen, damit der Fokus auf dem Boss liegt.
+        // Hier lassen wir sie noch spawnen, da sie den Raumschiffen schaden.
         const count = Math.min(5 + phase * 3, 30);
         for (let i = 0; i < count; i++) {
             meteors.push({ x: 800 + Math.random() * 400, y: Math.random() * 550 + 25, radius: 15, speed: 0.7 + phase * 0.1, hp: 2 + Math.floor(phase / 2) });
@@ -192,15 +198,19 @@
         clearInterval(meteoriteSpawnInterval);
         clearInterval(powerupSpawnInterval);
         clearInterval(enemySpawnInterval);
+        meteoriteSpawnInterval = null; // Setze Intervalle auf null, damit wir wissen, dass sie gestoppt sind
+        powerupSpawnInterval = null;
+        enemySpawnInterval = null;
     }
 
     function gameOver() {
         isGameOver = true;
         stopSpawning();
         gameOverScreen.style.display = "block";
-        // Musik stoppen oder leiser machen
         music.pause();
         music.currentTime = 0;
+        // Stoppe die Haupt-Animation, damit 'draw()' nicht mehr aufgerufen wird
+        // requestAnimationFrame() wird in 'draw()' nur aufgerufen, wenn !isGameOver
     }
 
     document.addEventListener("keydown", e => {
@@ -215,10 +225,10 @@
         if (e.key === "3") selected = "Volt Girl";
         if (e.key === "4") selected = "Boomimp";
         if (e.key === " ") activateSpecial();
-        if (e.key === "w") bullets.push({ x: char.x, y: char.y, dx: 0, dy: -10, damage: 1 });
-        if (e.key === "s") bullets.push({ x: char.x, y: char.y, dx: 0, dy: 10, damage: 1 });
-        if (e.key === "a") bullets.push({ x: char.x, y: char.y, dx: -10, dy: 0, damage: 1 });
-        if (e.key === "d") bullets.push({ x: char.x, y: char.y, dx: 10, dy: 0, damage: 1 });
+        if (e.key === "w") bullets.push({ x: char.x, y: char.y, dx: 0, dy: -10, damage: 1, radius: 5 });
+        if (e.key === "s") bullets.push({ x: char.x, y: char.y, dx: 0, dy: 10, damage: 1, radius: 5 });
+        if (e.key === "a") bullets.push({ x: char.x, y: char.y, dx: -10, dy: 0, damage: 1, radius: 5 });
+        if (e.key === "d") bullets.push({ x: char.x, y: char.y, dx: 10, dy: 0, damage: 1, radius: 5 });
     });
 
     function drawCharacter(name, char) {
@@ -259,12 +269,11 @@
         ctx.fill();
     }
 
-    // Funktion zum Behandeln des Boss-Todes (zentralisiert und verbessert)
     function handleBossDefeat() {
-        if (isGameOver) return; // Verhindere doppelte Ausführung, falls Spiel bereits vorbei
+        if (isGameOver) return; // Doppelte Ausführung bei Game Over verhindern
 
         effects.push({ x: boss.x, y: boss.y, type: "explosion", time: 60 });
-        boss = null; // Boss entfernen, bevor weitere Logik
+        boss = null; // Boss sofort entfernen
         phase++;
         console.log(`Boss besiegt! Nächste Phase: ${phase}`);
 
@@ -272,21 +281,25 @@
             alert("Glückwunsch! Du hast alle Phasen geschafft!"); // Gewinn-Nachricht
             gameOver(); // Spiel beenden, wenn alle Phasen durch sind
         } else {
-            // Spawns stoppen
+            // Spawns stoppen und alle vorhandenen Feinde/Meteoriten/Projektile entfernen
             stopSpawning();
-            meteors.length = 0; // Alle bestehenden Meteoriten entfernen
-            enemies.length = 0; // Alle bestehenden Gegner entfernen
-            bullets.length = 0; // Alle bestehenden Projektile entfernen
+            meteors.length = 0;
+            enemies.length = 0;
+            bullets.length = 0;
+            powerups.length = 0; // Auch Power-Ups entfernen
 
+            // Kurze Pause, bevor der nächste Boss gespawnt wird
             setTimeout(() => {
-                if (!isGameOver) { // Nur spawnen, wenn Spiel nicht vorbei ist
+                if (!isGameOver) { // Nur fortfahren, wenn das Spiel nicht während der Pause beendet wurde
                     spawnBoss();
-                    // Spawns wieder starten für die neue Phase
+                    // Spawns für die neue Phase starten
+                    // Achtung: Wenn der Boss da ist, sollen normalerweise keine normalen Gegner spawnen.
+                    // Die Logik in spawnEnemy() regelt das.
                     enemySpawnInterval = setInterval(spawnEnemy, 2000);
                     meteoriteSpawnInterval = setInterval(spawnMeteorites, 5000);
                     powerupSpawnInterval = setInterval(spawnPowerup, 8000);
                 }
-            }, 5000); // 5 Sekunden Pause bis zum nächsten Boss
+            }, 5000); // 5 Sekunden Pause
         }
     }
 
@@ -311,27 +324,32 @@
             radius = 100;
         }
 
-        enemies.forEach((e, ei) => {
-            if (checkCollision({x: char.x, y: char.y, radius: radius}, e)) { // Verwendet den Radius des Spezialangriffs
+        // Kollision mit normalen Gegnern
+        for (let i = enemies.length - 1; i >= 0; i--) {
+            const e = enemies[i];
+            if (checkCollision({x: char.x, y: char.y, radius: radius}, e)) {
                 e.hp -= damage;
                 if (e.hp <= 0) {
-                    enemies.splice(ei, 1);
+                    enemies.splice(i, 1);
                     effects.push({ x: e.x, y: e.y, type: "explosion", time: 30 });
                 }
             }
-        });
+        }
 
-        meteors.forEach((m, mi) => {
-            if (checkCollision({x: char.x, y: char.y, radius: radius}, m)) { // Verwendet den Radius des Spezialangriffs
+        // Kollision mit Meteoriten
+        for (let i = meteors.length - 1; i >= 0; i--) {
+            const m = meteors[i];
+            if (checkCollision({x: char.x, y: char.y, radius: radius}, m)) {
                 m.hp -= damage;
                 if (m.hp <= 0) {
-                    meteors.splice(mi, 1);
+                    meteors.splice(i, 1);
                     effects.push({ x: m.x, y: m.y, type: "explosion", time: 30 });
                 }
             }
-        });
+        }
 
-        if (boss && checkCollision({x: char.x, y: char.y, radius: radius}, boss)) { // Verwendet den Radius des Spezialangriffs
+        // Kollision mit Boss
+        if (boss && checkCollision({x: char.x, y: char.y, radius: radius}, boss)) {
             boss.hp -= damage;
             if (boss.hp <= 0) {
                 handleBossDefeat();
@@ -367,6 +385,7 @@
 
             let bulletHit = false;
 
+            // Kollision Bullet mit Gegnern
             for (let j = enemies.length - 1; j >= 0; j--) {
                 const e = enemies[j];
                 if (checkCollision(b, e)) {
@@ -382,6 +401,7 @@
             }
             if (bulletHit) continue;
 
+            // Kollision Bullet mit Meteoriten
             for (let j = meteors.length - 1; j >= 0; j--) {
                 const m = meteors[j];
                 if (checkCollision(b, m)) {
@@ -397,13 +417,15 @@
             }
             if (bulletHit) continue;
 
-            // Wichtig: Nur prüfen, wenn Boss existiert
+            // Kollision Bullet mit Boss
             if (boss && checkCollision(b, boss)) {
                 boss.hp -= b.damage;
                 bullets.splice(i, 1);
                 if (boss.hp <= 0) {
                     handleBossDefeat();
-                    return; // Sofort beenden, damit keine weiteren Kollisionen in dieser Frame den null gesetzten Boss prüfen
+                    // WICHTIG: Wenn der Boss besiegt wurde, müssen wir die aktuelle Update-Runde hier beenden,
+                    // da der Boss-Objekt "null" gesetzt wird. Ein weiterer Zugriff würde einen Fehler verursachen.
+                    return;
                 }
             }
         }
@@ -413,24 +435,32 @@
             const e = enemies[i];
             e.x -= e.speed;
             if (e.x < 0) {
-                let hitShip = false;
+                // Wenn ein Gegner den linken Rand erreicht und kein Schiff trifft, soll er dennoch Schaden verursachen.
+                // Es ist sicherer, hier zu prüfen, ob alle Schiffe noch leben.
+                let shipHit = false;
                 for (const ship of spaceships) {
-                    if (checkCollision(e, { x: ship.x, y: ship.y, radius: 30 })) {
-                        ship.hp -= 100;
-                        if (ship.hp <= 0) gameOver();
-                        hitShip = true;
-                        break;
+                    if (ship.hp > 0 && checkCollision(e, { x: ship.x, y: ship.y, radius: 30 })) {
+                        ship.hp -= 100; // Schaden am Schiff
+                        if (ship.hp <= 0) {
+                            gameOver();
+                            return; // Game Over, beende Update
+                        }
+                        shipHit = true;
+                        break; // Nur ein Schiff pro Gegner
                     }
                 }
-                enemies.splice(i, 1);
-                if (hitShip) continue;
+                enemies.splice(i, 1); // Gegner entfernen, egal ob er getroffen hat oder nicht
+                continue; // Nächsten Gegner prüfen
             }
 
             const char = characters[selected];
-            if (checkCollision(e, { x: char.x, y: char.y, radius: 25 })) {
+            if (char.hp > 0 && checkCollision(e, { x: char.x, y: char.y, radius: 25 })) {
                 char.hp -= 1;
                 enemies.splice(i, 1);
-                if (char.hp <= 0) gameOver();
+                if (char.hp <= 0) {
+                    gameOver();
+                    return; // Game Over, beende Update
+                }
             }
         }
 
@@ -440,58 +470,80 @@
             m.x -= m.speed;
 
             if (m.x < 0) {
+                // Meteoriten, die den Bildschirm verlassen, verursachen keinen Schaden mehr an den Schiffen.
+                // Der Schaden am Schiff sollte nur bei direkter Kollision auftreten.
+                // Daher ist hier kein Schiffsschaden mehr nötig, wenn sie den Rand erreichen.
                 meteors.splice(i, 1);
                 continue;
             }
 
             for (let j = spaceships.length - 1; j >= 0; j--) {
                 const ship = spaceships[j];
-                if (checkCollision(m, { x: ship.x, y: ship.y, radius: 30 })) {
+                if (ship.hp > 0 && checkCollision(m, { x: ship.x, y: ship.y, radius: 30 })) {
                     const damage = m.radius > 20 ? 200 : 100;
                     ship.hp -= damage;
-                    meteors.splice(i, 1);
-                    if (ship.hp <= 0) gameOver();
-                    break;
+                    meteors.splice(i, 1); // Meteorit entfernen, nachdem er getroffen hat
+                    if (ship.hp <= 0) {
+                        gameOver();
+                        return; // Game Over, beende Update
+                    }
+                    break; // Nur ein Schiff pro Meteorit
                 }
             }
 
             const char = characters[selected];
-            if (checkCollision(m, { x: char.x, y: char.y, radius: 25 })) {
+            if (char.hp > 0 && checkCollision(m, { x: char.x, y: char.y, radius: 25 })) {
                 const damage = m.radius > 20 ? 2 : 1;
                 char.hp -= damage;
-                meteors.splice(i, 1);
-                if (char.hp <= 0) gameOver();
+                meteors.splice(i, 1); // Meteorit entfernen, nachdem er getroffen hat
+                if (char.hp <= 0) {
+                    gameOver();
+                    return; // Game Over, beende Update
+                }
             }
         }
 
         // Boss bewegen und prüfen, ob er ein Raumschiff oder Held trifft
         if (boss) { // Nur prüfen, wenn Boss existiert
             boss.x -= boss.speed;
+            // Begrenze y-Bewegung, damit Boss nicht außerhalb des Canvas fliegt
             boss.y += Math.sin(Date.now() / 500) * 0.5;
+            boss.y = Math.max(boss.radius, Math.min(canvas.height - boss.radius, boss.y));
+
 
             // Kollision mit Raumschiffen oder Helden, wenn Boss den "Angriffsbereich" erreicht
-            if (boss.x < 150) {
+            // Oder falls er sie während seiner Bewegung trifft
+            if (boss.x < canvas.width * 0.8) { // Boss ist weit genug reingekommen, um anzugreifen
                 // Kollision mit Raumschiffen prüfen
                 for (const ship of spaceships) {
-                    if (checkCollision(boss, { x: ship.x, y: ship.y, radius: 30 })) {
+                    if (ship.hp > 0 && checkCollision(boss, { x: ship.x, y: ship.y, radius: 30 })) {
                         ship.hp -= 300;
-                        if (ship.hp <= 0) gameOver();
-                        // Der Boss muss nicht entfernt werden, wenn er ein Schiff trifft,
-                        // er bewegt sich weiter und könnte ein anderes treffen oder vom Bildschirm fliegen.
+                        if (ship.hp <= 0) {
+                            gameOver();
+                            return; // Game Over, beende Update
+                        }
                     }
                 }
                 
                 // Kollision mit ausgewähltem Helden prüfen
                 const char = characters[selected];
-                if (checkCollision(boss, { x: char.x, y: char.y, radius: 25 })) {
+                if (char.hp > 0 && checkCollision(boss, { x: char.x, y: char.y, radius: 25 })) {
                     char.hp -= 50;
-                    if (char.hp <= 0) gameOver();
+                    if (char.hp <= 0) {
+                        gameOver();
+                        return; // Game Over, beende Update
+                    }
                 }
             }
 
-            // Wenn der Boss komplett vom Bildschirm geflogen ist, behandle ihn als besiegt
+            // Wenn der Boss komplett vom Bildschirm geflogen ist (ohne getötet zu werden)
             if (boss.x < -boss.radius) {
-                handleBossDefeat();
+                // Das bedeutet, der Boss hat es bis zum Ende geschafft. Das ist eine Art "Niederlage"
+                // oder zumindest ein Verpassen. In diesem Fall wollen wir die Phase trotzdem wechseln,
+                // aber der Boss wurde nicht "besiegt" im Sinne von HP = 0.
+                // Es ist eine Design-Entscheidung, ob das Spiel hier endet oder die Phase wechselt.
+                // Für dein Szenario "Spiel bricht nicht ab", wechseln wir die Phase.
+                handleBossDefeat(); // Wir behandeln es als besiegt, um die Phase zu wechseln
                 return; // Wichtig: Beende die Update-Runde sofort
             }
         }
@@ -499,7 +551,7 @@
         // Powerups aufsammeln
         powerups.forEach((p, pi) => {
             const char = characters[selected];
-            if (checkCollision(p, { x: char.x, y: char.y, radius: 25 })) {
+            if (char.hp > 0 && checkCollision(p, { x: char.x, y: char.y, radius: 25 })) {
                 powerups.splice(pi, 1);
                 char.hp = Math.min(char.hp + 20, 100);
             }
@@ -513,53 +565,77 @@
         for (const name in characters) drawCharacter(name, characters[name]);
         enemies.forEach(drawEnemy);
         meteors.forEach(drawMeteor);
-        if (boss) drawBoss(boss);
+        if (boss) drawBoss(boss); // Boss nur zeichnen, wenn er existiert
         bullets.forEach(b => {
             ctx.fillStyle = "yellow";
             ctx.beginPath(); ctx.arc(b.x, b.y, 5, 0, Math.PI * 2); ctx.fill();
         });
         powerups.forEach(drawPowerup);
         drawDestructionEffects();
+        
+        // Erst 'update()' aufrufen, dann 'requestAnimationFrame()'
+        // Dies stellt sicher, dass der Zustand aktualisiert wird, bevor die nächste Frame angefordert wird
         update();
-        if (!isGameOver) requestAnimationFrame(draw);
+
+        // Nur die nächste Frame anfordern, wenn das Spiel NICHT vorbei ist
+        if (!isGameOver) {
+            requestAnimationFrame(draw);
+        } else {
+            console.log("Game Over: Animation gestoppt.");
+        }
     }
 
     function startGame() {
-        // Sicherstellen, dass das Spiel nicht schon läuft oder vorbei ist
-        if (isGameOver) {
-            console.warn("Spiel ist bereits vorbei oder Initialisierungsproblem.");
+        if (!imagesLoaded === totalImages) {
+            console.warn("Bilder noch nicht geladen, kann Spiel nicht starten.");
+            return;
+        }
+        if (isGameOver) { // Wenn das Spiel bereits vorbei ist (z.B. nach einem GameOver und Neustartversuch)
+            // Hier könnten wir eine Reset-Funktion aufrufen, aber für jetzt einfach zurückkehren
+            console.warn("Spiel ist bereits vorbei. Bitte Seite neu laden für Neustart.");
             return;
         }
 
-        // Initialisiere die Phase und spawne den ersten Boss
-        phase = 1; // Sicherstellen, dass wir bei Phase 1 beginnen
-        spawnBoss();
-        
-        // Stoppe bestehende Intervalle, um Duplikate zu vermeiden, falls startGame erneut aufgerufen wird
-        stopSpawning();
+        // Zustand auf Anfang setzen (falls man die startGame-Funktion wiederverwenden möchte)
+        isGameOver = false;
+        phase = 1;
+        boss = null;
+        bullets.length = 0;
+        enemies.length = 0;
+        meteors.length = 0;
+        powerups.length = 0;
+        effects.length = 0;
+        // Charakter-HP zurücksetzen
+        for (const charName in characters) {
+            characters[charName].hp = 100;
+        }
+        // Raumschiff-HP zurücksetzen
+        for (const ship of spaceships) {
+            ship.hp = 300;
+        }
 
-        enemySpawnInterval = setInterval(() => {
-            if (isGameOver) {
-                clearInterval(enemySpawnInterval);
-                return;
-            }
-            // Gegner nur spawnen, wenn kein Boss auf dem Bildschirm ist, für eine klarere Phasenübergang
-            if (!boss) {
-                spawnEnemy();
-            }
-        }, 2000);
+        spawnBoss(); // Starte direkt mit dem ersten Boss
 
+        stopSpawning(); // Sicherstellen, dass keine alten Intervalle laufen
+
+        // Spawning-Intervalle starten
+        // enemySpawnInterval soll nur Feinde spawnen, wenn kein Boss da ist.
+        enemySpawnInterval = setInterval(spawnEnemy, 2000);
         meteoriteSpawnInterval = setInterval(spawnMeteorites, 5000);
         powerupSpawnInterval = setInterval(spawnPowerup, 8000);
 
-        requestAnimationFrame(draw);
+        // Musik starten
+        music.play().catch(e => console.log("Musik konnte nicht automatisch abgespielt werden:", e));
+
+        requestAnimationFrame(draw); // Starte die Render-Schleife
     }
 
     document.getElementById("startButton").addEventListener("click", function () {
-        console.log("Button geklickt!");
+        console.log("Start Button geklickt!");
         if (imagesLoaded === totalImages) {
             console.log("Alle Bilder fertig, Spiel startet!");
-            this.style.display = "none";
+            this.style.display = "none"; // Start-Button ausblenden
+            gameOverScreen.style.display = "none"; // Game Over Screen ausblenden, falls sichtbar
             startGame();
         } else {
             alert("Bitte warten – Bilder werden noch geladen.");
