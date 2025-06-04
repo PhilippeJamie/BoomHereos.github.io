@@ -72,7 +72,6 @@
         const dx = a.x - b.x;
         const dy = a.y - b.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
-        // Using a.radius and b.radius if available, otherwise default to 25 for general objects
         return distance < (a.radius || 25) + (b.radius || 25);
     }
 
@@ -106,8 +105,8 @@
     let phase = 1;
     let boss = null;
     let bullets = [];
-    const enemies = []; // Existing enemies (not meteors)
-    const meteors = []; // Specific for meteorites
+    const enemies = [];
+    const meteors = [];
     const powerups = [];
     const effects = [];
 
@@ -209,7 +208,7 @@
         if (e.key === "3") selected = "Volt Girl";
         if (e.key === "4") selected = "Boomimp";
         if (e.key === " ") activateSpecial();
-        if (e.key === "w") bullets.push({ x: char.x, y: char.y, dx: 0, dy: -10, damage: 1 }); // Increased speed and added damage
+        if (e.key === "w") bullets.push({ x: char.x, y: char.y, dx: 0, dy: -10, damage: 1 });
         if (e.key === "s") bullets.push({ x: char.x, y: char.y, dx: 0, dy: 10, damage: 1 });
         if (e.key === "a") bullets.push({ x: char.x, y: char.y, dx: -10, dy: 0, damage: 1 });
         if (e.key === "d") bullets.push({ x: char.x, y: char.y, dx: 10, dy: 0, damage: 1 });
@@ -257,9 +256,8 @@
         const char = characters[selected];
         effects.push({ x: char.x, y: char.y, type: char.ability, time: 30 });
 
-        // Special attack logic
-        let damage = 5; // Base damage for special attack
-        let radius = 70; // Area of effect
+        let damage = 5;
+        let radius = 70;
 
         if (char.ability === "Punch") {
             damage = 10;
@@ -275,7 +273,6 @@
             radius = 100;
         }
 
-        // Apply damage to enemies, meteors, and boss in range
         enemies.forEach((e, ei) => {
             if (Math.hypot(char.x - e.x, char.y - e.y) < radius + e.radius) {
                 e.hp -= damage;
@@ -302,8 +299,13 @@
                 effects.push({ x: boss.x, y: boss.y, type: "explosion", time: 60 });
                 boss = null;
                 phase++;
-                if (phase > 10) gameOver();
-                else spawnBoss();
+                // Hier ist die Änderung! Nur gameOver, wenn alle Phasen durch sind.
+                if (phase > 10) { // Angenommen, 10 Phasen sind das Maximum
+                    gameOver();
+                } else {
+                    // Starten eines Timers, bevor der nächste Boss spawnt
+                    setTimeout(spawnBoss, 5000); // 5 Sekunden Pause bis zum nächsten Boss
+                }
             }
         }
     }
@@ -323,88 +325,91 @@
     function update() {
         if (isGameOver) return;
 
-        // Update Bullets
         for (let i = bullets.length - 1; i >= 0; i--) {
             const b = bullets[i];
             b.x += b.dx;
             b.y += b.dy;
 
-            // Remove bullets off-screen
             if (b.x < 0 || b.x > 800 || b.y < 0 || b.y > 600) {
                 bullets.splice(i, 1);
                 continue;
             }
 
-            // Bullet collision with Enemies
+            let bulletHit = false; // Flag to check if bullet hit something
+
             for (let j = enemies.length - 1; j >= 0; j--) {
                 const e = enemies[j];
-                if (checkCollision(b, e)) { // Use checkCollision
+                if (checkCollision(b, e)) {
                     e.hp -= b.damage;
-                    bullets.splice(i, 1); // Remove bullet
+                    bullets.splice(i, 1);
                     if (e.hp <= 0) {
                         enemies.splice(j, 1);
                         effects.push({ x: e.x, y: e.y, type: "explosion", time: 30 });
                     }
-                    break; // Bullet hit something, so stop checking for this bullet
+                    bulletHit = true;
+                    break;
                 }
             }
+            if (bulletHit) continue; // If bullet hit an enemy, don't check meteors or boss
 
-            // Bullet collision with Meteors
             for (let j = meteors.length - 1; j >= 0; j--) {
                 const m = meteors[j];
-                if (checkCollision(b, m)) { // Use checkCollision
+                if (checkCollision(b, m)) {
                     m.hp -= b.damage;
-                    bullets.splice(i, 1); // Remove bullet
+                    bullets.splice(i, 1);
                     if (m.hp <= 0) {
                         meteors.splice(j, 1);
                         effects.push({ x: m.x, y: m.y, type: "explosion", time: 30 });
                     }
-                    break; // Bullet hit something, so stop checking for this bullet
+                    bulletHit = true;
+                    break;
                 }
             }
+            if (bulletHit) continue;
 
-            // Bullet collision with Boss
-            if (boss && checkCollision(b, boss)) { // Use checkCollision
+            if (boss && checkCollision(b, boss)) {
                 boss.hp -= b.damage;
-                bullets.splice(i, 1); // Remove bullet
+                bullets.splice(i, 1);
                 if (boss.hp <= 0) {
                     effects.push({ x: boss.x, y: boss.y, type: "explosion", time: 60 });
                     boss = null;
                     phase++;
-                    if (phase > 10) gameOver();
-                    else spawnBoss();
+                    // Hier ist die Änderung! Nur gameOver, wenn alle Phasen durch sind.
+                    if (phase > 10) {
+                        gameOver();
+                    } else {
+                        // Starten eines Timers, bevor der nächste Boss spawnt
+                        setTimeout(spawnBoss, 5000); // 5 Sekunden Pause bis zum nächsten Boss
+                    }
                 }
             }
         }
 
-        // Enemies bewegen und Kollision mit Raumschiffen
         for (let i = enemies.length - 1; i >= 0; i--) {
             const e = enemies[i];
             e.x -= e.speed;
-            if (e.x < 0) { // Enemy reached the left side
+            if (e.x < 0) {
                 let hitShip = false;
                 for (const ship of spaceships) {
-                    if (Math.abs(ship.y - e.y) < 40) { // If enemy is close to a spaceship's row
+                    if (Math.abs(ship.y - e.y) < 40) {
                         ship.hp -= 100;
                         if (ship.hp <= 0) gameOver();
                         hitShip = true;
                         break;
                     }
                 }
-                enemies.splice(i, 1); // Remove enemy after it goes off-screen or hits a ship
-                if (hitShip) continue; // If it hit a ship, move to next enemy
+                enemies.splice(i, 1);
+                if (hitShip) continue;
             }
 
-            // Collision with Player character
             const char = characters[selected];
             if (checkCollision(e, { x: char.x, y: char.y, radius: 25 })) {
-                char.hp -= 1; // Small damage for touching an enemy
-                enemies.splice(i, 1); // Remove enemy after collision with player
+                char.hp -= 1;
+                enemies.splice(i, 1);
                 if (char.hp <= 0) gameOver();
             }
         }
 
-        // Meteore bewegen und Kollisionen prüfen
         for (let i = meteors.length - 1; i >= 0; i--) {
             const m = meteors[i];
             m.x -= m.speed;
@@ -414,7 +419,6 @@
                 continue;
             }
 
-            // Kollision mit Raumschiffen
             for (let j = spaceships.length - 1; j >= 0; j--) {
                 const ship = spaceships[j];
                 if (checkCollision(m, { x: ship.x, y: ship.y, radius: 30 })) {
@@ -426,7 +430,6 @@
                 }
             }
 
-            // Kollision mit Spieler
             const char = characters[selected];
             if (checkCollision(m, { x: char.x, y: char.y, radius: 25 })) {
                 const damage = m.radius > 20 ? 2 : 1;
@@ -436,50 +439,46 @@
             }
         }
 
-        // Boss bewegen und prüfen, ob er ein Raumschiff oder Held trifft
         if (boss) {
             boss.x -= boss.speed;
-            boss.y += Math.sin(Date.now() / 500) * 0.5; // Smooth vertical movement
+            boss.y += Math.sin(Date.now() / 500) * 0.5;
 
-            // Boss reaches left side (spaceship area)
-            if (boss.x < 150) { // Adjust this threshold if needed
+            if (boss.x < 150) {
                 let bossHitTarget = false;
 
-                // Check collision with spaceships (already present and correct)
                 for (const ship of spaceships) {
                     if (checkCollision(boss, { x: ship.x, y: ship.y, radius: 30 })) {
-                        ship.hp -= 300; // Big damage from Boss
+                        ship.hp -= 300;
                         if (ship.hp <= 0) gameOver();
                         bossHitTarget = true;
                     }
                 }
                 
-                // Check collision with selected character
                 const char = characters[selected];
                 if (checkCollision(boss, { x: char.x, y: char.y, radius: 25 })) {
-                    char.hp -= 50; // Damage the hero
+                    char.hp -= 50;
                     if (char.hp <= 0) gameOver();
                     bossHitTarget = true;
                 }
 
                 if (bossHitTarget) {
                     effects.push({ x: boss.x, y: boss.y, type: "bossExplode", time: 40 });
-                    boss = null; // Boss is "defeated" after hitting its target
+                    boss = null;
                     phase++;
+                    // Hier ist die Änderung! Nur gameOver, wenn alle Phasen durch sind.
                     if (phase > 10) {
                         gameOver();
                     } else {
-                        setTimeout(spawnBoss, 10000); // Next boss after 10 seconds
+                        // Starten eines Timers, bevor der nächste Boss spawnt
+                        setTimeout(spawnBoss, 5000); // 5 Sekunden Pause bis zum nächsten Boss
                     }
                 }
             }
         }
 
-
-        // Powerups aufsammeln
         powerups.forEach((p, pi) => {
             const char = characters[selected];
-            if (checkCollision(p, { x: char.x, y: char.y, radius: 25 })) { // Use checkCollision
+            if (checkCollision(p, { x: char.x, y: char.y, radius: 25 })) {
                 powerups.splice(pi, 1);
                 char.hp = Math.min(char.hp + 20, 100);
             }
@@ -505,12 +504,17 @@
     }
 
     function startGame() {
-        spawnBoss();
+        // Der Boss wird direkt beim Start gespawnt, wenn phase 1 ist
+        if (phase === 1) {
+            spawnBoss();
+        }
+
         enemySpawnInterval = setInterval(() => {
             if (isGameOver || phase > 10) {
                 clearInterval(enemySpawnInterval);
-                if (phase > 10 && !isGameOver) { // Check if game is not over and all phases are completed
+                if (phase > 10 && !isGameOver) {
                     alert("Glückwunsch! Du hast alle Phasen geschafft!");
+                    gameOver(); // Spiel beenden, wenn alle Phasen durch sind
                 }
                 return;
             }
