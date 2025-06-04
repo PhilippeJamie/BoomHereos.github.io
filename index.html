@@ -44,6 +44,7 @@
 ">Spiel starten</button>
 
 <script>
+
   
   function checkCollision(a, b) {
   const dx = a.x - b.x;
@@ -57,17 +58,12 @@ const gameOverScreen = document.getElementById("gameOver");
 const music = document.getElementById("bgMusic");
 music.volume = 0.3;
 
-let spaceships = []; 
-
 const shipCount = 4;
 const shipAreaHeight = canvas.height;
 const shipSpacing = shipAreaHeight / shipCount;
-
-function initializeSpaceships() {
-  spaceships = []; 
-  for (let i = 0; i < shipCount; i++) {
-    spaceships.push({ x: 50, y: shipSpacing * i + shipSpacing / 2, hp: 1000 });
-  }
+const spaceships = [];
+for (let i = 0; i < shipCount; i++) {
+  spaceships.push({ x: 50, y: shipSpacing * i + shipSpacing / 2, hp: 1000 });
 }
 
 const characters = {
@@ -109,27 +105,23 @@ images["Boomimp"].src = "img/Boomimp-removebg-preview.png";
 images["enemy"].src = "img/meteor_enemy.png";
 images["spaceship"].src = "img/Raumschiff-removebg-preview.png";
 
-let imagesLoadedCount = 0; // Umbenannt, um Verwechslungen zu vermeiden
+let imagesLoaded = 0;
 const totalImages = Object.keys(images).length;
-
-// Funktion zum Überprüfen, ob alle Bilder geladen sind
-function checkAllImagesLoaded() {
-    if (imagesLoadedCount === totalImages) {
-        console.log("Alle Bilder geladen. Spiel bereit.");
-        // Eventuell hier schon den Start-Button aktivieren oder eine visuelle Rückmeldung geben
-    }
-}
 
 for (const key in images) {
   images[key].onload = () => {
-    imagesLoadedCount++;
-    console.log(`Bild geladen: ${key}. Geladene Bilder: ${imagesLoadedCount}/${totalImages}`);
-    checkAllImagesLoaded();
+    imagesLoaded++;
+    if (imagesLoaded === totalImages) {
+      console.log("Alle Bilder geladen. Spiel bereit.");
+      // NICHTS starten – Start passiert beim Button-Klick!
+    }
   };
   images[key].onerror = () => {
     console.error(`Bild ${key} konnte nicht geladen werden.`);
-    imagesLoadedCount++; // Auch bei Fehlern den Zähler erhöhen, damit das Spiel nicht blockiert
-    checkAllImagesLoaded();
+    imagesLoaded++;
+    if (imagesLoaded === totalImages) {
+      console.log("Alle Bilder geladen (mit Fehlern).");
+    }
   };
 }
 
@@ -261,27 +253,19 @@ function update() {
     if (b.x < 0 || b.x > 800 || b.y < 0 || b.y > 600) bullets.splice(i, 1);
   });
 
-  // Enemies bewegen und Kollision mit Raumschiffen prüfen
-  for (let i = enemies.length - 1; i >= 0; i--) {
-    const e = enemies[i];
-    e.x -= e.speed;
-    if (e.x < 0) {
-      // Wenn der Gegner den Bildschirm verlässt, Schaden an einem zufälligen Raumschiff
-      if (spaceships.length > 0) {
-        const randomShipIndex = Math.floor(Math.random() * spaceships.length);
-        const ship = spaceships[randomShipIndex];
-        ship.hp -= 100;
-        if (ship.hp <= 0) {
-          spaceships.splice(randomShipIndex, 1); // Raumschiff entfernen
-          if (spaceships.length === 0) {
-            gameOver(); 
-            return; 
-          }
-        }
-      }
-      enemies.splice(i, 1); 
-    }
-  }
+  // Enemies bewegen
+  enemies.forEach((e, i) => {
+    e.x -= e.speed;
+    if (e.x < 0) {
+      spaceships.forEach(ship => {
+        if (Math.abs(ship.y - e.y) < 40) {
+          ship.hp -= 100;
+          enemies.splice(i, 1);
+          if (ship.hp <= 0) gameOver();
+        }
+      });
+    }
+  });
 
   // Meteore bewegen und Kollisionen prüfen
   for (let i = meteors.length - 1; i >= 0; i--) {
@@ -299,15 +283,9 @@ function update() {
       if (checkCollision(m, { x: ship.x, y: ship.y, radius: 30 })) {
         const damage = m.radius > 20 ? 200 : 100;
         ship.hp -= damage;
-        meteors.splice(i, 1); 
-        if (ship.hp <= 0) {
-          spaceships.splice(j, 1); 
-          if (spaceships.length === 0) {
-            gameOver(); 
-            return;
-          }
-        }
-        break; 
+        meteors.splice(i, 1);
+        if (ship.hp <= 0) gameOver();
+        break;
       }
     }
 
@@ -338,39 +316,36 @@ function update() {
 
 // Boss bewegen und prüfen, ob er ein Raumschiff trifft
 if (boss) {
-  boss.x -= boss.speed; 
-  boss.y += Math.sin(Date.now() / 500) * 0.5; 
-
-  if (boss.x < 100) { 
-    let hitShip = false; 
-    for (let j = spaceships.length - 1; j >= 0; j--) {
-      const ship = spaceships[j];
-      if (checkCollision(boss, { x: ship.x, y: ship.y, radius: 30 })) {
-        ship.hp -= 300; 
-        if (ship.hp <= 0) {
-          spaceships.splice(j, 1); 
-          if (spaceships.length === 0) {
-            gameOver(); 
-            return; 
-          }
-        }
-        hitShip = true;
-        break; 
-      }
-    }
-
-    if (hitShip || boss.x <= 0) { // Boss gilt als "weg", wenn er trifft oder die linke Seite erreicht
-      effects.push({ x: boss.x, y: boss.y, type: "bossExplode", time: 40 });
-      boss = null;
-      phase++;
-      if (phase > 10) {
-        gameOver(); 
-      } else {
-        setTimeout(spawnBoss, 10000); 
-      }
-    }
-  }
+  boss.x -= boss.speed; // Boss fliegt langsam nach links
+  // Kleine vertikale Bewegung (optional)
+  boss.y += Math.sin(Date.now() / 500) * 0.5;
 }
+
+  if (boss.x < 100) { // Ankunft beim Raumschiff-Bereich
+    // Treffer prüfen
+    for (const ship of spaceships) {
+      if (Math.abs(ship.y - boss.y) < 50) {
+        ship.hp -= 300; // Großer Schaden durch Boss
+        if (ship.hp <= 0) gameOver();
+        break;
+      }
+    }
+
+    // Explosionseffekt & Boss entfernen
+    effects.push({ x: boss.x, y: boss.y, type: "bossExplode", time: 40 });
+    boss = null;
+    phase++;
+    
+    if (phase > 10) {
+      gameOver();
+    } else {
+      setTimeout(spawnBoss, 10000); // Nächster Boss nach 10 Sekunden
+    }
+  }
+}
+
+
+
 
   // Kugeln treffen Ziele
   bullets.forEach((b, bi) => {
@@ -414,6 +389,9 @@ if (boss) {
       char.hp = Math.min(char.hp + 20, 100);
     }
   });
+
+
+
   
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -434,23 +412,11 @@ function draw() {
 }
 
 function startGame() {
-  console.log("startGame() wurde aufgerufen!"); // Debug-Ausgabe
-  initializeSpaceships(); 
-  isGameOver = false; 
-  gameOverScreen.style.display = "none"; 
-  phase = 1; 
-  boss = null; 
-  bullets = []; 
-  enemies.length = 0; 
-  meteors.length = 0; 
-  powerups.length = 0; 
-  effects.length = 0; 
-
   spawnBoss();
   enemySpawnInterval = setInterval(() => {
     if (isGameOver || phase > 10) {
       clearInterval(enemySpawnInterval);
-      if (!isGameOver) alert("Glückwunsch! Du hast alle Phasen geschafft!"); 
+      alert("Glückwunsch! Du hast alle Phasen geschafft!");
       return;
     }
     spawnEnemy();
@@ -461,21 +427,14 @@ function startGame() {
 }
 
 document.getElementById("startButton").addEventListener("click", function () {
-  console.log("Start-Button geklickt!"); // Debug-Ausgabe
-  if (imagesLoadedCount === totalImages) { // Hier imagesLoadedCount verwenden
-    console.log("Alle Bilder fertig, Spiel startet!"); 
+  console.log("Button geklickt!");  // <-- DAS hier
+  if (imagesLoaded === totalImages) {
+    console.log("Alle Bilder fertig, Spiel startet!");  // <-- UND DAS hier
     this.style.display = "none";
     startGame();
   } else {
     alert("Bitte warten – Bilder werden noch geladen.");
-    console.log(`Bilder noch nicht geladen: ${imagesLoadedCount}/${totalImages}`); // Debug-Ausgabe
   }
-});
-
-// Wichtig: Startet das Spiel erst, wenn der DOM vollständig geladen ist
-document.addEventListener("DOMContentLoaded", function() {
-    console.log("DOM fully loaded and parsed.");
-    // Optional: Hier könnte man einen Ladebildschirm verstecken, wenn alles vorbereitet ist
 });
 
 </script>
