@@ -58,13 +58,20 @@ const gameOverScreen = document.getElementById("gameOver");
 const music = document.getElementById("bgMusic");
 music.volume = 0.3;
 
+let spaceships = []; // Jetzt ein let, damit wir es neu zuweisen können
+
 const shipCount = 4;
 const shipAreaHeight = canvas.height;
 const shipSpacing = shipAreaHeight / shipCount;
-const spaceships = [];
-for (let i = 0; i < shipCount; i++) {
-  spaceships.push({ x: 50, y: shipSpacing * i + shipSpacing / 2, hp: 1000 });
+
+function initializeSpaceships() {
+  spaceships = []; // Leeren und neu initialisieren
+  for (let i = 0; i < shipCount; i++) {
+    spaceships.push({ x: 50, y: shipSpacing * i + shipSpacing / 2, hp: 1000 });
+  }
 }
+initializeSpaceships(); // Initialisiere beim Start
+
 
 const characters = {
   "Max Blaze": { x: 200, y: 300, color: "red", ability: "Punch", hp: 100 },
@@ -253,19 +260,27 @@ function update() {
     if (b.x < 0 || b.x > 800 || b.y < 0 || b.y > 600) bullets.splice(i, 1);
   });
 
-  // Enemies bewegen
-  enemies.forEach((e, i) => {
-    e.x -= e.speed;
-    if (e.x < 0) {
-      spaceships.forEach(ship => {
-        if (Math.abs(ship.y - e.y) < 40) {
-          ship.hp -= 100;
-          enemies.splice(i, 1);
-          if (ship.hp <= 0) gameOver();
-        }
-      });
-    }
-  });
+  // Enemies bewegen und Kollision mit Raumschiffen prüfen
+  for (let i = enemies.length - 1; i >= 0; i--) {
+    const e = enemies[i];
+    e.x -= e.speed;
+    if (e.x < 0) {
+      // Wenn der Gegner den Bildschirm verlässt, Schaden an einem zufälligen Raumschiff
+      if (spaceships.length > 0) {
+        const randomShipIndex = Math.floor(Math.random() * spaceships.length);
+        const ship = spaceships[randomShipIndex];
+        ship.hp -= 100;
+        if (ship.hp <= 0) {
+          spaceships.splice(randomShipIndex, 1); // Raumschiff entfernen
+          if (spaceships.length === 0) {
+            gameOver(); // Nur Game Over, wenn alle Raumschiffe zerstört sind
+            return; // Beende die Update-Schleife, um weitere Aktionen zu vermeiden
+          }
+        }
+      }
+      enemies.splice(i, 1); // Gegner entfernen
+    }
+  }
 
   // Meteore bewegen und Kollisionen prüfen
   for (let i = meteors.length - 1; i >= 0; i--) {
@@ -283,9 +298,15 @@ function update() {
       if (checkCollision(m, { x: ship.x, y: ship.y, radius: 30 })) {
         const damage = m.radius > 20 ? 200 : 100;
         ship.hp -= damage;
-        meteors.splice(i, 1);
-        if (ship.hp <= 0) gameOver();
-        break;
+        meteors.splice(i, 1); // Meteoriten entfernen nach Treffer
+        if (ship.hp <= 0) {
+          spaceships.splice(j, 1); // Raumschiff entfernen
+          if (spaceships.length === 0) {
+            gameOver(); // Nur Game Over, wenn alle Raumschiffe zerstört sind
+            return;
+          }
+        }
+        break; // Wichtig: Breche die Schleife ab, nachdem der Meteorit ein Raumschiff getroffen hat
       }
     }
 
@@ -316,32 +337,39 @@ function update() {
 
 // Boss bewegen und prüfen, ob er ein Raumschiff trifft
 if (boss) {
-  boss.x -= boss.speed; // Boss fliegt langsam nach links
-  // Kleine vertikale Bewegung (optional)
-  boss.y += Math.sin(Date.now() / 500) * 0.5;
-}
+  boss.x -= boss.speed; // Boss fliegt langsam nach links
+  boss.y += Math.sin(Date.now() / 500) * 0.5; // Kleine vertikale Bewegung
 
-  if (boss.x < 100) { // Ankunft beim Raumschiff-Bereich
-    // Treffer prüfen
-    for (const ship of spaceships) {
-      if (Math.abs(ship.y - boss.y) < 50) {
-        ship.hp -= 300; // Großer Schaden durch Boss
-        if (ship.hp <= 0) gameOver();
-        break;
-      }
-    }
+  if (boss.x < 100) { // Ankunft beim Raumschiff-Bereich
+    let hitShip = false; // Flag, um zu sehen, ob ein Schiff getroffen wurde
+    for (let j = spaceships.length - 1; j >= 0; j--) {
+      const ship = spaceships[j];
+      if (checkCollision(boss, { x: ship.x, y: ship.y, radius: 30 })) {
+        ship.hp -= 300; // Großer Schaden durch Boss
+        if (ship.hp <= 0) {
+          spaceships.splice(j, 1); // Raumschiff entfernen
+          if (spaceships.length === 0) {
+            gameOver(); // Nur Game Over, wenn alle Raumschiffe zerstört sind
+            return; // Beende die Update-Schleife
+          }
+        }
+        hitShip = true;
+        break; // Boss trifft nur ein Schiff pro "Durchlauf"
+      }
+    }
 
-    // Explosionseffekt & Boss entfernen
-    effects.push({ x: boss.x, y: boss.y, type: "bossExplode", time: 40 });
-    boss = null;
-    phase++;
-    
-    if (phase > 10) {
-      gameOver();
-    } else {
-      setTimeout(spawnBoss, 10000); // Nächster Boss nach 10 Sekunden
-    }
-  }
+    // Wenn der Boss ein Schiff getroffen hat ODER die linke Seite des Bildschirms erreicht
+    if (hitShip || boss.x <= 0) {
+      effects.push({ x: boss.x, y: boss.y, type: "bossExplode", time: 40 });
+      boss = null;
+      phase++;
+      if (phase > 10) {
+        gameOver(); // Optional: Spiel endet nach Phase 10
+      } else {
+        setTimeout(spawnBoss, 10000); // Nächster Boss nach 10 Sekunden
+      }
+    }
+  }
 }
 
 
@@ -412,11 +440,12 @@ function draw() {
 }
 
 function startGame() {
+  initializeSpaceships(); // Stellen Sie sicher, dass die Raumschiffe bei Spielstart neu initialisiert werden
   spawnBoss();
   enemySpawnInterval = setInterval(() => {
     if (isGameOver || phase > 10) {
       clearInterval(enemySpawnInterval);
-      alert("Glückwunsch! Du hast alle Phasen geschafft!");
+      if (!isGameOver) alert("Glückwunsch! Du hast alle Phasen geschafft!"); // Nur anzeigen, wenn nicht schon Game Over
       return;
     }
     spawnEnemy();
