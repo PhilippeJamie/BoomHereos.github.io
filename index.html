@@ -86,7 +86,6 @@ const enemies = [];
 const meteors = [];
 const powerups = [];
 const effects = [];
-// --- NEU: Array für Spezialattacken-Effekte
 let specialAttacks = []; 
 
 const images = {
@@ -231,14 +230,13 @@ function drawPowerup(p) {
 
 function activateSpecial() {
   const char = characters[selected];
-  // Füge einen Spezialattacken-Effekt hinzu, der Schaden verursachen kann
   specialAttacks.push({ 
     x: char.x, 
     y: char.y, 
     type: char.ability, 
-    time: 30, // Dauer des Effekts
-    radius: 70, // Reichweite des Spezialangriffs (anpassbar)
-    damage: 10 // Schaden der Spezialattacke
+    time: 30, 
+    radius: 70, 
+    damage: 10 
   });
 }
 
@@ -253,12 +251,11 @@ function drawDestructionEffects() {
     if (eff.time <= 0) effects.splice(i, 1);
   });
 
-  // --- NEU: Zeichne Spezialattacken-Effekte
   specialAttacks.forEach((special, i) => {
     ctx.beginPath();
-    ctx.strokeStyle = `rgba(0, 255, 255, ${special.time / 30})`; // Türkise Farbe für Spezialattacke
+    ctx.strokeStyle = `rgba(0, 255, 255, ${special.time / 30})`; 
     ctx.lineWidth = 5;
-    ctx.arc(special.x, special.y, special.radius - (30 - special.time) * 2, 0, Math.PI * 2); // Effekt schrumpft oder expandiert
+    ctx.arc(special.x, special.y, special.radius - (30 - special.time) * 2, 0, Math.PI * 2); 
     ctx.stroke();
     special.time--;
     if (special.time <= 0) specialAttacks.splice(i, 1);
@@ -336,34 +333,30 @@ function update() {
     }
   }
 
-// Boss bewegen und prüfen, ob er ein Raumschiff trifft
-if (boss) {
-  boss.x -= boss.speed; // Boss fliegt langsam nach links
-  // Kleine vertikale Bewegung (optional)
-  boss.y += Math.sin(Date.now() / 500) * 0.5;
+  // Boss bewegen und prüfen, ob er ein Raumschiff trifft
+  // WICHTIG: Prüfen, ob der Boss existiert, bevor auf seine Eigenschaften zugegriffen wird!
+  if (boss) {
+    boss.x -= boss.speed; 
+    boss.y += Math.sin(Date.now() / 500) * 0.5;
 
-  // Hier wird geprüft, ob der Boss die Raumschiffe erreicht und Schaden verursacht.
-  // Das ist bereits im Originalcode vorhanden und bleibt unverändert.
-  if (boss.x < 100) { 
-    for (const ship of spaceships) {
-      if (Math.abs(ship.y - boss.y) < 50) {
-        ship.hp -= 300; 
-        if (ship.hp <= 0) gameOver();
-        break;
+    if (boss.x < 100) { 
+      for (const ship of spaceships) {
+        if (Math.abs(ship.y - boss.y) < 50) {
+          ship.hp -= 300; 
+          if (ship.hp <= 0) gameOver();
+          break;
+        }
+      }
+      effects.push({ x: boss.x, y: boss.y, type: "bossExplode", time: 40 });
+      boss = null;
+      phase++;
+      if (phase > 10) {
+        gameOver();
+      } else {
+        setTimeout(spawnBoss, 10000); 
       }
     }
-    effects.push({ x: boss.x, y: boss.y, type: "bossExplode", time: 40 });
-    boss = null;
-    phase++;
-    if (phase > 10) {
-      gameOver();
-    } else {
-      setTimeout(spawnBoss, 10000); 
-    }
   }
-}
-
-
 
 
   // Kugeln treffen Ziele
@@ -388,6 +381,7 @@ if (boss) {
       }
     });
 
+    // WICHTIG: Auch hier prüfen, ob der Boss existiert
     if (boss && Math.hypot(b.x - boss.x, b.y - boss.y) < boss.radius) {
       boss.hp--; bullets.splice(bi, 1);
       if (boss.hp <= 0) {
@@ -409,14 +403,14 @@ if (boss) {
     }
   });
 
-  // --- NEU: Spezialattacken-Kollisionen prüfen
+  // Spezialattacken-Kollisionen prüfen
   specialAttacks.forEach((special, spi) => {
-    if (special.time > 0) { // Nur aktive Spezialattacken prüfen
+    if (special.time > 0) { 
       // Kollision mit Meteoriten
       for (let i = meteors.length - 1; i >= 0; i--) {
         const m = meteors[i];
         if (checkCollision(special, m)) {
-          m.hp -= special.damage; // Schaden an Meteoriten
+          m.hp -= special.damage; 
           if (m.hp <= 0) {
             meteors.splice(i, 1);
             effects.push({ x: m.x, y: m.y, type: "explosion", time: 30 });
@@ -425,8 +419,9 @@ if (boss) {
       }
 
       // Kollision mit Boss
+      // WICHTIG: Auch hier prüfen, ob der Boss existiert
       if (boss && checkCollision(special, boss)) {
-        boss.hp -= special.damage; // Schaden an Boss
+        boss.hp -= special.damage; 
         if (boss.hp <= 0) {
           effects.push({ x: boss.x, y: boss.y, type: "explosion", time: 60 });
           boss = null;
@@ -458,7 +453,7 @@ function draw() {
 }
 
 function startGame() {
-  spawnBoss();
+  spawnBoss(); // Stellt sicher, dass der Boss beim Start existiert
   enemySpawnInterval = setInterval(() => {
     if (isGameOver || phase > 10) {
       clearInterval(enemySpawnInterval);
@@ -473,9 +468,9 @@ function startGame() {
 }
 
 document.getElementById("startButton").addEventListener("click", function () {
-  console.log("Button geklickt!");   // <-- DAS hier
+  console.log("Button geklickt!");   
   if (imagesLoaded === totalImages) {
-    console.log("Alle Bilder fertig, Spiel startet!");   // <-- UND DAS hier
+    console.log("Alle Bilder fertig, Spiel startet!");   
     this.style.display = "none";
     startGame();
   } else {
