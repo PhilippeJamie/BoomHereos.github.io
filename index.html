@@ -6,9 +6,33 @@
   <title>Boom Heroes</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body, html { width: 100%; height: 100%; font-family: Arial, sans-serif; background: #222; overflow: hidden; display: flex; justify-content: center; align-items: center; }
-    canvas { display: block; background: none; margin: auto; position: absolute; top: 0; bottom: 0; left: 0; right: 0; border: 5px solid #fff; }
-    #ui { position: absolute; top: 10px; left: 10px; color: white; font-size: 18px; z-index: 10; }
+    body, html {
+      width: 100%;
+      height: 100%;
+      font-family: Arial, sans-serif;
+      background: #222;
+      overflow: hidden;
+      display: flex; /* Verwende Flexbox für die Zentrierung des Hauptinhalts */
+      justify-content: center; /* Zentriert horizontal */
+      align-items: center; /* Zentriert vertikal */
+      position: relative; /* Wichtig für absolute Positionierung von Kindern */
+    }
+    canvas {
+      display: block;
+      background: none;
+      border: 5px solid #fff;
+      /* Keine absolute Positionierung mehr hier */
+      /* top: 0; bottom: 0; left: 0; right: 0; */
+      z-index: 1; /* Sicherstellen, dass das Canvas hinter dem UI und Button ist */
+    }
+    #ui {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      color: white;
+      font-size: 18px;
+      z-index: 10;
+    }
     #gameOver {
       display: none;
       position: absolute;
@@ -20,14 +44,21 @@
       background: rgba(0, 0, 0, 0.7);
       padding: 20px;
       border: 2px solid white;
+      z-index: 20; /* Höher als der Start-Button */
     }
     #startButton {
-      position: absolute; /* Behält die absolute Positionierung bei */
-      z-index: 10;
+      position: absolute; /* Muss absolut bleiben, um über dem Canvas zu sein */
+      top: 50%; /* Zentriert vertikal relativ zum Body */
+      left: 50%; /* Zentriert horizontal relativ zum Body */
+      transform: translate(-50%, -50%); /* Korrigiert die Position basierend auf der eigenen Größe */
+      font-size: 24px;
+      padding: 12px 24px;
+      cursor: pointer;
+      z-index: 15; /* Sicherstellen, dass der Button über dem Canvas, aber unter dem Game Over Screen ist */
     }
   </style>
 </head>
-<body>    
+<body>
 <div id="ui">Boom Heroes - 1–4 für Helden, Pfeile bewegen, W/A/S/D = Schießen, Leertaste = Spezial</div>
 <div id="gameOver">GAME OVER - Seite neu laden zum Neustart</div>
 <audio id="bgMusic" loop>
@@ -36,14 +67,10 @@
 </audio>
 
 <canvas id="gameCanvas" width="800" height="600"></canvas>
-<button id="startButton" style="
-  font-size: 24px;
-  padding: 12px 24px;
-  cursor: pointer;
-">Spiel starten</button>
+<button id="startButton">Spiel starten</button>
 
-<script> 
-
+<script>
+  // ... (Der JavaScript-Code bleibt unverändert, da er die Positionierung nicht direkt betrifft) ...
   function checkCollision(a, b) {
   const dx = a.x - b.x;
   const dy = a.y - b.y;
@@ -54,7 +81,7 @@ const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 const gameOverScreen = document.getElementById("gameOver");
 const music = document.getElementById("bgMusic");
-music.volume = 0.3; 
+music.volume = 0.3;
 
 const shipCount = 4;
 const shipAreaHeight = canvas.height;
@@ -69,11 +96,11 @@ const characters = {
   "Torchbot": { x: 200, y: 300, color: "orange", ability: "Flame", hp: 100 },
   "Volt Girl": { x: 200, y: 300, color: "purple", ability: "Dash", hp: 100 },
   "Boomimp": { x: 200, y: 300, color: "green", ability: "Boom", hp: 100 }
-}; 
+};
 
   document.addEventListener("keydown", () => {
   if (music.paused) music.play();
-}, { once: true }); 
+}, { once: true });
 
 let selected = "Max Blaze";
 let isGameOver = false;
@@ -83,7 +110,7 @@ let bullets = [];
 const enemies = [];
 const meteors = [];
 const powerups = [];
-const effects = []; 
+const effects = [];
 
 const images = {
   "Max Blaze": new Image(),
@@ -93,7 +120,7 @@ const images = {
   "enemy": new Image(),
   "background": new Image(),
   "spaceship": new Image()
-}; 
+};
 
 images["background"].src = "img/IMG_4485.png";
 images["Max Blaze"].src = "img/Max_blaze-removebg-preview.png";
@@ -101,10 +128,10 @@ images["Torchbot"].src = "img/Torchbot-removebg-preview.png";
 images["Volt Girl"].src = "img/Volt_girl-removebg-preview.png";
 images["Boomimp"].src = "img/Boomimp-removebg-preview.png";
 images["enemy"].src = "img/meteor_enemy.png";
-images["spaceship"].src = "img/Raumschiff-removebg-preview.png"; 
+images["spaceship"].src = "img/Raumschiff-removebg-preview.png";
 
 let imagesLoaded = 0;
-const totalImages = Object.keys(images).length; 
+const totalImages = Object.keys(images).length;
 
 for (const key in images) {
   images[key].onload = () => {
@@ -121,7 +148,7 @@ for (const key in images) {
       console.log("Alle Bilder geladen (mit Fehlern).");
     }
   };
-} 
+}
 
 function drawSpaceships() {
   spaceships.forEach(ship => {
@@ -130,13 +157,13 @@ function drawSpaceships() {
     ctx.font = "16px Arial";
     ctx.fillText(`HP: ${ship.hp}`, ship.x - 25, ship.y + 45);
   });
-} 
+}
 
 function spawnEnemy() {
   if (isGameOver || boss) return;
   const hp = Math.floor(Math.random() * 3) + 1;
   enemies.push({ x: 800, y: Math.random() * 550 + 25, radius: 25, speed: 0.7 + phase * 0.1, hp });
-} 
+}
 
 function spawnMeteorites() {
   if (isGameOver) return;
@@ -145,35 +172,35 @@ function spawnMeteorites() {
     meteors.push({ x: 800 + Math.random() * 400, y: Math.random() * 550 + 25, radius: 15, speed: 0.7 + phase * 0.1, hp: 2 + Math.floor(phase / 2) });
 
   }
-} 
+}
 
 function spawnPowerup() {
   if (!isGameOver) {
     powerups.push({ x: Math.random() * 700 + 50, y: Math.random() * 500 + 50, radius: 10 });
   }
-} 
+}
 
 
 function spawnBoss() {
   boss = { x: 800, y: 250, radius: 60, speed: 0.7 + phase * 0.1, hp: 20 + phase * 10 };
-} 
+}
 
 
 let enemySpawnInterval;
 let meteoriteSpawnInterval;
-let powerupSpawnInterval; 
+let powerupSpawnInterval;
 
 function stopSpawning() {
   clearInterval(meteoriteSpawnInterval);
   clearInterval(powerupSpawnInterval);
   clearInterval(enemySpawnInterval);
-} 
+}
 
 function gameOver() {
   isGameOver = true;
   stopSpawning();
   gameOverScreen.style.display = "block";
-} 
+}
 
 document.addEventListener("keydown", e => {
   const char = characters[selected];
@@ -191,7 +218,7 @@ document.addEventListener("keydown", e => {
   if (e.key === "s") bullets.push({ x: char.x, y: char.y, dx: 0, dy: 5 });
   if (e.key === "a") bullets.push({ x: char.x, y: char.y, dx: -5, dy: 0 });
   if (e.key === "d") bullets.push({ x: char.x, y: char.y, dx: 5, dy: 0 });
-}); 
+});
 
 function drawCharacter(name, char) {
   if(name !== selected) return;
@@ -201,34 +228,34 @@ function drawCharacter(name, char) {
   ctx.font = "16px Arial";
   ctx.fillText(name, char.x - 25, char.y - 35);
   ctx.fillText(`HP: ${char.hp}`, char.x - 25, char.y + 40);
-} 
+}
 
 function drawEnemy(e) {
   ctx.drawImage(images["enemy"], e.x - 25, e.y - 25, 50, 50);
-} 
+}
 
 function drawMeteor(m) {
   ctx.drawImage(images["enemy"], m.x - m.radius, m.y - m.radius, m.radius * 2, m.radius * 2);
-} 
+}
 
 function drawBoss(b) {
   ctx.drawImage(images["enemy"], b.x - 60, b.y - 60, 120, 120);
   ctx.fillStyle = "white";
   ctx.font = "20px Arial";
   ctx.fillText(`Boss HP: ${b.hp}`, b.x - 40, b.y - 70);
-} 
+}
 
 function drawPowerup(p) {
   ctx.fillStyle = "gold";
   ctx.beginPath();
   ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
   ctx.fill();
-} 
+}
 
 function activateSpecial() {
   const char = characters[selected];
   effects.push({ x: char.x, y: char.y, type: char.ability, time: 30 });
-} 
+}
 
 function drawDestructionEffects() {
   effects.forEach((eff, i) => {
@@ -240,17 +267,16 @@ function drawDestructionEffects() {
     eff.time--;
     if (eff.time <= 0) effects.splice(i, 1);
   });
-} 
-
+}
 function update() {
-  if (isGameOver) return; 
+  if (isGameOver) return;
 
   // Update Bullets
   bullets.forEach((b, i) => {
     b.x += b.dx;
     b.y += b.dy;
     if (b.x < 0 || b.x > 800 || b.y < 0 || b.y > 600) bullets.splice(i, 1);
-  }); 
+  });
 
   // Enemies bewegen
   enemies.forEach((e, i) => {
@@ -264,17 +290,17 @@ function update() {
         }
       });
     }
-  }); 
+  });
 
   // Meteore bewegen und Kollisionen prüfen
   for (let i = meteors.length - 1; i >= 0; i--) {
     const m = meteors[i];
-    m.x -= m.speed; 
+    m.x -= m.speed;
 
     if (m.x < 0) {
       meteors.splice(i, 1);
       continue;
-    } 
+    }
 
     // Kollision mit Raumschiffen
     for (let j = spaceships.length - 1; j >= 0; j--) {
@@ -286,7 +312,7 @@ function update() {
         if (ship.hp <= 0) gameOver();
         break;
       }
-    } 
+    }
 
     // Kollision mit Gegnern
     for (let j = enemies.length - 1; j >= 0; j--) {
@@ -301,7 +327,7 @@ function update() {
         meteors.splice(i, 1);
         break;
       }
-    } 
+    }
 
     // Kollision mit Spieler
     const char = characters[selected];
@@ -311,14 +337,14 @@ function update() {
       meteors.splice(i, 1);
       if (char.hp <= 0) gameOver();
     }
-  } 
+  }
 
 // Boss bewegen und prüfen, ob er ein Raumschiff trifft
 if (boss) {
   boss.x -= boss.speed; // Boss fliegt langsam nach links
   // Kleine vertikale Bewegung (optional)
   boss.y += Math.sin(Date.now() / 500) * 0.5;
-} 
+}
 
   if (boss && boss.x < 100) { // Ankunft beim Raumschiff-Bereich
     // Treffer prüfen
@@ -328,7 +354,7 @@ if (boss) {
         if (ship.hp <= 0) gameOver();
         break;
       }
-    } 
+    }
 
     // Explosionseffekt & Boss entfernen
     effects.push({ x: boss.x, y: boss.y, type: "bossExplode", time: 40 });
@@ -341,7 +367,9 @@ if (boss) {
       setTimeout(spawnBoss, 10000); // Nächster Boss nach 10 Sekunden
     }
   }
-} 
+}
+
+
 
 
   // Kugeln treffen Ziele
@@ -354,7 +382,7 @@ if (boss) {
           effects.push({ x: e.x, y: e.y, type: "explosion", time: 30 });
         }
       }
-    }); 
+    });
 
     meteors.forEach((m, mi) => {
       if (Math.hypot(b.x - m.x, b.y - m.y) < m.radius) {
@@ -364,7 +392,7 @@ if (boss) {
           effects.push({ x: m.x, y: m.y, type: "explosion", time: 30 });
         }
       }
-    }); 
+    });
 
     if (boss && Math.hypot(b.x - boss.x, b.y - boss.y) < boss.radius) {
       boss.hp--; bullets.splice(bi, 1);
@@ -376,7 +404,7 @@ if (boss) {
         else spawnBoss();
       }
     }
-  }); 
+  });
 
   // Powerups aufsammeln
   powerups.forEach((p, pi) => {
@@ -385,7 +413,7 @@ if (boss) {
       powerups.splice(pi, 1);
       char.hp = Math.min(char.hp + 20, 100);
     }
-  }); 
+  });
 
 
 function draw() {
@@ -404,7 +432,7 @@ function draw() {
   drawDestructionEffects();
   update();
   if (!isGameOver) requestAnimationFrame(draw);
-} 
+}
 
 function startGame() {
   spawnBoss();
@@ -419,20 +447,20 @@ function startGame() {
   meteoriteSpawnInterval = setInterval(spawnMeteorites, 5000);
   powerupSpawnInterval = setInterval(spawnPowerup, 8000);
   requestAnimationFrame(draw);
-} 
+}
 
 document.getElementById("startButton").addEventListener("click", function () {
-  console.log("Button geklickt!"); 
+  console.log("Button geklickt!");
   if (imagesLoaded === totalImages) {
-    console.log("Alle Bilder fertig, Spiel startet!"); 
+    console.log("Alle Bilder fertig, Spiel startet!");
     this.style.display = "none";
     startGame();
   } else {
     alert("Bitte warten – Bilder werden noch geladen.");
   }
-}); 
+});
 
 </script>
-    
+
 </body>
 </html>
