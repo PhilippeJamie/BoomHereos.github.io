@@ -67,10 +67,10 @@ for (let i = 0; i < shipCount; i++) {
 }
 
 const characters = {
-  "Max Blaze": { x: 200, y: 300, color: "red", ability: "Punch", hp: 100, specialDamage: 20 }, // Spezialschaden hinzugefügt
-  "Torchbot": { x: 200, y: 300, color: "orange", ability: "Flame", hp: 100, specialDamage: 15 }, // Spezialschaden hinzugefügt
-  "Volt Girl": { x: 200, y: 300, color: "purple", ability: "Dash", hp: 100, specialDamage: 10 }, // Spezialschaden hinzugefügt
-  "Boomimp": { x: 200, y: 300, color: "green", ability: "Boom", hp: 100, specialDamage: 25 } // Spezialschaden hinzugefügt
+  "Max Blaze": { x: 200, y: 300, color: "red", ability: "Punch", hp: 100 },
+  "Torchbot": { x: 200, y: 300, color: "orange", ability: "Flame", hp: 100 },
+  "Volt Girl": { x: 200, y: 300, color: "purple", ability: "Dash", hp: 100 },
+  "Boomimp": { x: 200, y: 300, color: "green", ability: "Boom", hp: 100 }
 };
 
   document.addEventListener("keydown", () => {
@@ -229,32 +229,7 @@ function drawPowerup(p) {
 
 function activateSpecial() {
   const char = characters[selected];
-  effects.push({ x: char.x, y: char.y, type: char.ability, time: 30, radius: 50 }); // Radius für den Spezialeffekt hinzugefügt
-  // Spezialattacke trifft Gegner
-  enemies.forEach(e => {
-    if (Math.hypot(char.x - e.x, char.y - e.y) < 70) { // Größerer Radius für Spezialattacke
-      e.hp -= char.specialDamage; // Schaden basierend auf dem Charakter
-      if (e.hp <= 0) {
-        const index = enemies.indexOf(e);
-        if (index > -1) {
-          enemies.splice(index, 1);
-          effects.push({ x: e.x, y: e.y, type: "explosion", time: 30 });
-        }
-      }
-    }
-  });
-
-  // Spezialattacke trifft Boss
-  if (boss && Math.hypot(char.x - boss.x, char.y - boss.y) < boss.radius + 50) { // Größerer Radius für Spezialattacke auf Boss
-    boss.hp -= char.specialDamage * 2; // Doppelschaden für Bosse
-    if (boss.hp <= 0) {
-      effects.push({ x: boss.x, y: boss.y, type: "explosion", time: 60 });
-      boss = null;
-      phase++;
-      if (phase > 10) gameOver();
-      else setTimeout(spawnBoss, 5000); // Boss nach 5 Sekunden neu spawnen
-    }
-  }
+  effects.push({ x: char.x, y: char.y, type: char.ability, time: 30 });
 }
 
 function drawDestructionEffects() {
@@ -262,7 +237,7 @@ function drawDestructionEffects() {
     ctx.beginPath();
     ctx.strokeStyle = `rgba(255, 165, 0, ${eff.time / 30})`;
     ctx.lineWidth = 3;
-    ctx.arc(eff.x, eff.y, (30 - eff.time) * 2, 0, Math.PI * 2); // Radius wächst
+    ctx.arc(eff.x, eff.y, 30 - eff.time, 0, Math.PI * 2);
     ctx.stroke();
     eff.time--;
     if (eff.time <= 0) effects.splice(i, 1);
@@ -344,6 +319,7 @@ if (boss) {
   boss.x -= boss.speed; // Boss fliegt langsam nach links
   // Kleine vertikale Bewegung (optional)
   boss.y += Math.sin(Date.now() / 500) * 0.5;
+}
 
   if (boss.x < 100) { // Ankunft beim Raumschiff-Bereich
     // Treffer prüfen
