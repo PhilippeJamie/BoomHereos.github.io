@@ -252,6 +252,20 @@
         ctx.fill();
     }
 
+    // Funktion zum Behandeln des Boss-Todes (zentralisiert)
+    function handleBossDefeat() {
+        effects.push({ x: boss.x, y: boss.y, type: "explosion", time: 60 });
+        boss = null;
+        phase++;
+        if (phase > 10) { // Angenommen, 10 Phasen sind das Maximum
+            gameOver();
+            alert("Glückwunsch! Du hast alle Phasen geschafft!"); // Gewinn-Nachricht
+        } else {
+            // Starten eines Timers, bevor der nächste Boss spawnt
+            setTimeout(spawnBoss, 5000); // 5 Sekunden Pause bis zum nächsten Boss
+        }
+    }
+
     function activateSpecial() {
         const char = characters[selected];
         effects.push({ x: char.x, y: char.y, type: char.ability, time: 30 });
@@ -296,16 +310,7 @@
         if (boss && Math.hypot(char.x - boss.x, char.y - boss.y) < radius + boss.radius) {
             boss.hp -= damage;
             if (boss.hp <= 0) {
-                effects.push({ x: boss.x, y: boss.y, type: "explosion", time: 60 });
-                boss = null;
-                phase++;
-                // Hier ist die Änderung! Nur gameOver, wenn alle Phasen durch sind.
-                if (phase > 10) { // Angenommen, 10 Phasen sind das Maximum
-                    gameOver();
-                } else {
-                    // Starten eines Timers, bevor der nächste Boss spawnt
-                    setTimeout(spawnBoss, 5000); // 5 Sekunden Pause bis zum nächsten Boss
-                }
+                handleBossDefeat(); // Nutze die zentralisierte Funktion
             }
         }
     }
@@ -335,7 +340,7 @@
                 continue;
             }
 
-            let bulletHit = false; // Flag to check if bullet hit something
+            let bulletHit = false;
 
             for (let j = enemies.length - 1; j >= 0; j--) {
                 const e = enemies[j];
@@ -350,7 +355,7 @@
                     break;
                 }
             }
-            if (bulletHit) continue; // If bullet hit an enemy, don't check meteors or boss
+            if (bulletHit) continue;
 
             for (let j = meteors.length - 1; j >= 0; j--) {
                 const m = meteors[j];
@@ -371,16 +376,7 @@
                 boss.hp -= b.damage;
                 bullets.splice(i, 1);
                 if (boss.hp <= 0) {
-                    effects.push({ x: boss.x, y: boss.y, type: "explosion", time: 60 });
-                    boss = null;
-                    phase++;
-                    // Hier ist die Änderung! Nur gameOver, wenn alle Phasen durch sind.
-                    if (phase > 10) {
-                        gameOver();
-                    } else {
-                        // Starten eines Timers, bevor der nächste Boss spawnt
-                        setTimeout(spawnBoss, 5000); // 5 Sekunden Pause bis zum nächsten Boss
-                    }
+                    handleBossDefeat(); // Nutze die zentralisierte Funktion
                 }
             }
         }
@@ -443,9 +439,11 @@
             boss.x -= boss.speed;
             boss.y += Math.sin(Date.now() / 500) * 0.5;
 
-            if (boss.x < 150) {
+            // Problemfall: Boss erreicht linke Seite und gilt als "besiegt"
+            if (boss.x < 150) { // Wenn der Boss den Raumschiff-Bereich erreicht
                 let bossHitTarget = false;
 
+                // Kollision mit Raumschiffen prüfen
                 for (const ship of spaceships) {
                     if (checkCollision(boss, { x: ship.x, y: ship.y, radius: 30 })) {
                         ship.hp -= 300;
@@ -454,6 +452,7 @@
                     }
                 }
                 
+                // Kollision mit ausgewähltem Helden prüfen
                 const char = characters[selected];
                 if (checkCollision(boss, { x: char.x, y: char.y, radius: 25 })) {
                     char.hp -= 50;
@@ -461,17 +460,15 @@
                     bossHitTarget = true;
                 }
 
-                if (bossHitTarget) {
-                    effects.push({ x: boss.x, y: boss.y, type: "bossExplode", time: 40 });
-                    boss = null;
-                    phase++;
-                    // Hier ist die Änderung! Nur gameOver, wenn alle Phasen durch sind.
-                    if (phase > 10) {
-                        gameOver();
-                    } else {
-                        // Starten eines Timers, bevor der nächste Boss spawnt
-                        setTimeout(spawnBoss, 5000); // 5 Sekunden Pause bis zum nächsten Boss
-                    }
+                if (bossHitTarget) { // Wenn der Boss ein Ziel getroffen hat (oder die linke Seite erreicht hat, was auch einen "Treffer" darstellt)
+                    handleBossDefeat(); // Nutze die zentralisierte Funktion
+                }
+                // HINWEIS: Wenn der Boss an Raumschiffen und Helden vorbeifliegt ohne sie zu treffen,
+                // muss er auch irgendwann despawnen und die Phase vorantreiben.
+                // Aktuell wird er nur despawnt, wenn er etwas trifft.
+                // Füge hinzu, falls Boss ohne Kollision vorbei soll, aber Phase triggern:
+                if (boss && boss.x < -boss.radius) { // Boss ist komplett vom Bildschirm geflogen
+                    handleBossDefeat();
                 }
             }
         }
@@ -504,17 +501,15 @@
     }
 
     function startGame() {
-        // Der Boss wird direkt beim Start gespawnt, wenn phase 1 ist
-        if (phase === 1) {
+        if (phase === 1) { // Nur beim Start den ersten Boss spawnen
             spawnBoss();
         }
 
         enemySpawnInterval = setInterval(() => {
-            if (isGameOver || phase > 10) {
+            if (isGameOver || phase > 10) { // Hier sollte die Phasenbegrenzung greifen
                 clearInterval(enemySpawnInterval);
                 if (phase > 10 && !isGameOver) {
-                    alert("Glückwunsch! Du hast alle Phasen geschafft!");
-                    gameOver(); // Spiel beenden, wenn alle Phasen durch sind
+                    // Alert wird jetzt durch handleBossDefeat ausgelöst, wenn alle Phasen durch sind
                 }
                 return;
             }
